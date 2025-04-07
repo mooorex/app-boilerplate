@@ -8,9 +8,9 @@ enum {
     UINT128_MAX_LENGTH = 40,
     DECIMAL_BASE = 10,
     P64_Q = 6,                       // 2^64 % 10
-    P64_R = 1844674407370955161ULL,  // 2^64 / 10
-
 };
+
+#define P64_R  1844674407370955161ULL  // 2^64 / 10
 
 bool format_u128(uint64_t high, uint64_t low, char *dst, size_t dst_len);
 bool format_fpu128(uint64_t high, uint64_t low, char *dst, size_t dst_len, uint8_t decimals);

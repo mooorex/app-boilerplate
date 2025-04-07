@@ -112,11 +112,20 @@ bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
     return buffer_seek_cur(buf, size);
 }
 
-bool parse_ont_id(buffer_t *buf) {
+bool parse_ont_id(buffer_t *buf, tx_parameter_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(out != NULL, "NULL out");
 
     uint8_t size = 0;
-    return buffer_read_u8(buf, &size) && size != 0 && !buffer_seek_cur(buf, size);
+    if (!buffer_read_u8(buf, &size) || size == 0 || !buffer_can_read(buf, size)) {
+        return false;
+    }
+
+    out->len = size;
+    out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->type = PARAM_ONTID;
+
+    return buffer_seek_cur(buf, size);
 }
 
 bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
@@ -225,7 +234,7 @@ bool parse_method_params(buffer_t *buf,
                 }
                 break;
             case PARAM_ONTID:
-                if (!parse_ont_id(buf)) {
+                if (!parse_ont_id(buf, &(tx->method.parameters[cur]))) {
                     return false;
                 }
                 break;

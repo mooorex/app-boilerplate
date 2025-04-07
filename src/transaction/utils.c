@@ -30,7 +30,7 @@
 #include "utils.h"
 #include "types.h"
 #include "format.h"
-#include "globals.h"
+
 
 bool format_u128(uint64_t high, uint64_t low, char *dst, size_t dst_len) {
     if (dst == NULL) {
