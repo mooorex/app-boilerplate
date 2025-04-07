@@ -51,11 +51,12 @@ bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *out) {
 
     out->len = ADDRESS_LEN;
     out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->type = PARAM_ADDR;
 
     return buffer_seek_cur(buf, ADDRESS_LEN);
 }
 
-bool parse_uint64(buffer_t *buf, tx_parameter_t *out) {
+bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
@@ -68,12 +69,13 @@ bool parse_uint64(buffer_t *buf, tx_parameter_t *out) {
     if (amt > OPCODE_PUSH_NUMBER && amt <= OPCODE_PUSH_NUMBER + 16) {
         amt = 1;
         stepping = false;
-    } else if (amt > 8) {
+    } else if (amt > 2 * sizeof(uint64_t)) {
         return false;
     }
 
     out->len = amt;
     out->data = (uint8_t*)(buf->ptr + buf->offset - 1);
+    out->type = PARAM_UINT64;
 
     return !stepping || buffer_seek_cur(buf, out->len);
 }
@@ -89,6 +91,7 @@ bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
 
     out->len = size;
     out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->type = PARAM_UINT128;
 
     return buffer_seek_cur(buf, size);
 }
@@ -104,6 +107,7 @@ bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
 
     out->len = size;
     out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->type = PARAM_PUBKEY;
 
     return buffer_seek_cur(buf, size);
 }
@@ -123,7 +127,7 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
     uint64_t pks_num = 0;
     uint64_t amts_num = 0;
 
-    if (!parse_uint64(buf, &pairs[0]) || !convert_bytes_to_uint64_le(&pairs[0], &pks_num) ||
+    if (!parse_amount(buf, &pairs[0]) || !convert_bytes_to_uint64_le(&pairs[0], &pks_num) ||
         pks_num == 0 || !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
     }
@@ -135,14 +139,14 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
         }
     }
 
-    if (!parse_uint64(buf, &pairs[pks_num + 1]) ||
+    if (!parse_amount(buf, &pairs[pks_num + 1]) ||
         !convert_bytes_to_uint64_le(&pairs[pks_num + 1], &amts_num) || pks_num != amts_num ||
         !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
     }
 
     for (size_t i = 1; i <= amts_num; i++) {
-        if (!parse_uint64(buf, &pairs[pks_num + 1 + i]) ||
+        if (!parse_amount(buf, &pairs[pks_num + 1 + i]) ||
             (i != amts_num &&
              !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
             return false;
@@ -163,7 +167,7 @@ bool parse_trasfer_state(buffer_t *buf, tx_parameter_t *transfer_state, size_t *
         !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
         !parse_address(buf, true, &transfer_state[1]) ||
         !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
-        !parse_uint64(buf, &transfer_state[2]) ||
+        !parse_amount(buf, &transfer_state[2]) ||
         !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
         !parse_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
         return false;
@@ -196,7 +200,7 @@ bool parse_method_params(buffer_t *buf,
                 }
                 break;
             case PARAM_UINT64:
-                if (!parse_uint64(buf, &(tx->method.parameters[cur++]))) {
+                if (!parse_amount(buf, &(tx->method.parameters[cur++]))) {
                     return false;
                 }
                 break;

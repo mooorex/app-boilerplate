@@ -13,7 +13,7 @@ bool parse_method_params(buffer_t *buf, transaction_t *tx, const tx_parameter_ty
 bool parse_constant(buffer_t *buf, const uint8_t *str, size_t len);
 bool parse_method(buffer_t *buf, tx_parameter_t *method_name); 
 bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *address);
-bool parse_uint64(buffer_t *buf, tx_parameter_t *amount) ;
+bool parse_amount(buffer_t *buf, tx_parameter_t *amount) ;
 bool parse_uint128(buffer_t *buf, tx_parameter_t *amount) ;
 bool parse_pk(buffer_t *buf, tx_parameter_t *pk);
 bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pk_list, size_t *cur);

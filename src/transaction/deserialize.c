@@ -361,7 +361,7 @@ parser_status_e native_transfer_deserialize_params(buffer_t *buf, transaction_t 
     tx_parameter_t tmp_num;
     uint64_t out;
 
-    if (!parse_uint64(buf, &tmp_num) || !convert_bytes_to_uint64_le(&tmp_num, &out) || out != num ||
+    if (!parse_amount(buf, &tmp_num) || !convert_bytes_to_uint64_le(&tmp_num, &out) || out != num ||
         !parse_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK))) {
         return BYTECODE_PARSING_ERROR;
     }
@@ -415,7 +415,7 @@ parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx)
     tx_parameter_t params_num_t;
     uint64_t params_num_out;
     if (tx->contract.type == NEOVM_CONTRACT &&
-        (!parse_uint64(buf, &params_num_t) ||
+        (!parse_amount(buf, &params_num_t) ||
          !convert_bytes_to_uint64_le(&params_num_t, &params_num_out) ||
          params_num != params_num_out ||
          !parse_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK)))) {
