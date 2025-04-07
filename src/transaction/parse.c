@@ -75,7 +75,7 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
 
     out->len = amt;
     out->data = (uint8_t*)(buf->ptr + buf->offset - 1);
-    out->type = PARAM_UINT64;
+    out->type = PARAM_AMOUNT;
 
     return !stepping || buffer_seek_cur(buf, out->len);
 }
@@ -199,7 +199,7 @@ bool parse_method_params(buffer_t *buf,
                     return false;
                 }
                 break;
-            case PARAM_UINT64:
+            case PARAM_AMOUNT:
                 if (!parse_amount(buf, &(tx->method.parameters[cur++]))) {
                     return false;
                 }

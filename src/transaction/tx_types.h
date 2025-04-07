@@ -57,11 +57,11 @@ typedef enum {
 typedef enum {
     PARAM_ADDR,
     PARAM_PUBKEY,
-    PARAM_UINT64,
+    PARAM_AMOUNT,
     PARAM_UINT128,
     PARAM_PK_AMOUNT_PAIRS,
     PARAM_ONTID,
-    PARAM_TRANSFER_STATE,  // PARAM_ADDR, PARAM_ADDR, PARAM_UINT64
+    PARAM_TRANSFER_STATE,  // PARAM_ADDR, PARAM_ADDR, PARAM_AMOUNT
     PARAM_TRANSFER_STATE_LIST,
     PARAM_END,  // Marks the end of parameters, not an actual parameter
 } tx_parameter_type_e;
