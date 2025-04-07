@@ -1,24 +1,45 @@
 #pragma once
 
 #include <stdint.h>   // uint*_t
-#include <stddef.h>   // size_t
 #include <stdbool.h>  // bool
+#include <stddef.h>
 
-/**
- * Convert public key to address.
- *
- * address = Keccak256(public_key)[12:32] (20 bytes)
- *
- * @param[in]  public_key
- *   Pointer to byte buffer with public key.
- *   The public key is represented as 65 bytes with 1 byte for format and 32 bytes for
- *   each coordinate.
- * @param[out] out
- *   Pointer to output byte buffer for address.
- * @param[in]  out_len
- *   Length of output byte buffer.
- *
- * @return true if success, false otherwise.
- *
- */
-bool address_from_pubkey(const uint8_t public_key[static 65], uint8_t *out, size_t out_len);
+ #include "types.h"
+#include "tx_types.h"
+#include "lcx_common.h"
+#include "lcx_sha256.h"
+#include "lcx_ripemd160.h"
+#include "crypto_helpers.h"
+#include "globals.h"
+
+#define SHA256_HASH_LEN 32
+#define ADDRESS_VERSION 23
+#define SCRIPT_HASH_LEN 20
+#define SCRIPT_HASH_CHECKSUM_LEN 4
+#define ADDRESS_LEN_PRE (1 + SCRIPT_HASH_LEN + SCRIPT_HASH_CHECKSUM_LEN)
+#define VERIFICATION_SCRIPT_LENGTH 35
+#define BASE58_ADDRESS_LEN 34
+#define UNCOMPRESSED_KEY_LEN 65
+#define COMPRESSED_KEY_LEN 33
+#define CHAIN_CODE_LEN 32
+#define UINT160_LEN 20
+
+bool convert_script_hash_to_base58_address(char* out, 
+                                         size_t out_len, 
+                                         const uint8_t* script_hash);
+
+bool derive_address_from_bip32_path(char* out, 
+                                  size_t out_len);
+
+bool convert_uncompressed_pubkey_to_address(const uint8_t uncompressed_key[static UNCOMPRESSED_KEY_LEN], 
+                                          char* out, 
+                                          size_t out_len);
+
+bool compute_address_from_verification_script(const uint8_t *verification_script, 
+                                            size_t script_len, 
+                                            uint8_t *output_hash);
+
+bool compress_public_key(const uint8_t *uncompressed_key, 
+                        uint8_t* out, 
+                        size_t out_len);
+

@@ -67,54 +67,7 @@ int ui_display_transaction_bs_choice(bool is_blind_signed) {
         return io_send_sw(SW_BAD_STATE);
     }
 
-    // Format amount and address to g_amount and g_address buffers
-    memset(g_amount, 0, sizeof(g_amount));
-    char amount[30] = {0};
-    if (!format_fpu64(amount,
-                      sizeof(amount),
-                      G_context.tx_info.transaction.value,
-                      EXPONENT_SMALLEST_UNIT)) {
-        return io_send_sw(SW_DISPLAY_AMOUNT_FAIL);
-    }
-    snprintf(g_amount, sizeof(g_amount), "BOL %.*s", sizeof(amount), amount);
-    memset(g_address, 0, sizeof(g_address));
-
-    if (format_hex(G_context.tx_info.transaction.to, ADDRESS_LEN, g_address, sizeof(g_address)) ==
-        -1) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
-
-    // Setup data to display
-    pairs[0].item = "Amount";
-    pairs[0].value = g_amount;
-    pairs[1].item = "Address";
-    pairs[1].value = g_address;
-
-    // Setup list
-    pairList.nbMaxLinesForValue = 0;
-    pairList.nbPairs = 2;
-    pairList.pairs = pairs;
-
-    if (is_blind_signed) {
-        // Start blind-signing review flow
-        nbgl_useCaseReviewBlindSigning(TYPE_TRANSACTION,
-                                       &pairList,
-                                       &ICON_APP_BOILERPLATE,
-                                       "Review transaction\nto send BOL",
-                                       NULL,
-                                       "Sign transaction\nto send BOL",
-                                       NULL,
-                                       review_choice);
-    } else {
-        // Start review flow
-        nbgl_useCaseReview(TYPE_TRANSACTION,
-                           &pairList,
-                           &ICON_APP_BOILERPLATE,
-                           "Review transaction\nto send BOL",
-                           NULL,
-                           "Sign transaction\nto send BOL",
-                           review_choice);
-    }
+ 
     return 0;
 }
 

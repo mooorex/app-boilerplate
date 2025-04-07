@@ -68,3 +68,4 @@ typedef struct {
     uint32_t bip32_path[MAX_BIP32_PATH];  /// BIP32 path
     uint8_t bip32_path_len;               /// length of BIP32 path
 } global_ctx_t;
+
