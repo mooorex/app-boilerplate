@@ -43,12 +43,10 @@ uint64_t getBytesValueByLen(buffer_t *buf, uint8_t len) {
     return getValueByLen(value, len);
 }
 
-uint64_t getValueByLen(uint8_t *value,uint8_t len) {
-
-    uint64_t pre_value =0;
+uint64_t getValueByLen(uint8_t *value, uint8_t len) {
+    uint64_t pre_value = 0;
     for (int i = 0; i < len; i++) {
-        PRINTF("After: data points to %p, value = 0x%02X\n", (void *)value, value[i]);
-        pre_value |= ((uint64_t)value[i] << (8 * i));
+        pre_value |= ((uint64_t) value[i] << (8 * i));
     }
     return pre_value;
 }
@@ -269,24 +267,22 @@ bool get_token_value(uint8_t value_len,
                      const uint8_t decimals,
                      char *amount,
                      size_t amount_len) {
-    uint8_t value = *data;
-    PRINTF("get_token_value00000:%d\n", value);
     if (value_len == 1) {
-        return format_fpu64_trimmed(amount, amount_len, getValueByLen(data+1, value_len), decimals);
+        uint8_t value = *data;
+        return format_fpu64_trimmed(amount, amount_len, value - OPCODE_PUSH_NUMBER, decimals);
     } else {
         if (value_len <= UINT64_T_BYTE_LEN) {
-            PRINTF("get_token_value1111: %d,:%d\n", value_len, decimals);
             return format_fpu64_trimmed(amount,
                                         amount_len,
-                                        getValueByLen(data+1, value_len),
+                                        getValueByLen(data + 1, value_len),
                                         decimals);
         } else if (value_len > TWO_UINT64_T_BYTE_LEN) {
             return false;
         } else {
             char totalAmount[MAX_LENGTH];
             uint128_to_decimal_string(
-                getValueByLen(data + UINT64_T_BYTE_LEN, value_len - UINT64_T_BYTE_LEN),
-                getValueByLen(data, value_len - UINT64_T_BYTE_LEN),
+                getValueByLen(data + 1 + UINT64_T_BYTE_LEN, value_len - UINT64_T_BYTE_LEN),
+                getValueByLen(data + 1, value_len - UINT64_T_BYTE_LEN),
                 totalAmount,
                 sizeof(totalAmount));
             process_precision(totalAmount, decimals, amount, amount_len);

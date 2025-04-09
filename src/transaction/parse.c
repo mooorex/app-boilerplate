@@ -74,7 +74,6 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = amt;
-    PRINTF("parse_amount: amt=%d\n", amt);
     out->data = (uint8_t*)(buf->ptr + buf->offset - 1);
     out->type = PARAM_AMOUNT;
 

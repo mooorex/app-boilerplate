@@ -40,7 +40,7 @@
 #include "../transaction/contract.h"
 #include "../transaction/utils.h"
 // Buffer where the transaction amount string is written
-static char g_amount[30];
+static char g_amount[40];
 // Buffer where the transaction address string is written
 static char g_address[40];
 static char g_peer_pubkey[66];
@@ -293,14 +293,18 @@ static uint8_t setTagValuePairs(void) {
         is_method(method_data, method_len, METHOD_APPROVE) ||
         is_method(method_data, method_len, METHOD_APPROVE_V2);  // OEP4 methods simplified to base methods
     if (is_transfer_or_approve) {
-        PRINTF("=> io_recv_command decimal:%d\n",
-               G_context.tx_info.transaction.contract.token_decimals);
         get_token_value(G_context.tx_info.transaction.method.parameters[2].len,
                         G_context.tx_info.transaction.method.parameters[2].data,
                         G_context.tx_info.transaction.contract.token_decimals,
                         g_amount,
                         sizeof(g_amount));
-        PRINTF("=> io_recv_command g_amount: %.*H\n",sizeof(g_amount), g_amount);
+        bool is_ont = memcmp(G_context.tx_info.transaction.contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
+        bool is_ong = memcmp(G_context.tx_info.transaction.contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
+        if(is_ont) {
+            strlcat(g_amount, ONT_VIEW, sizeof(g_amount));
+        } else if(is_ong) {
+            strlcat(g_amount, ONG_VIEW, sizeof(g_amount));
+        }         
         ADD_PAIR(AMOUNT, g_amount);
 
         // List of methods corresponding to the second if block (transferFrom variants)
@@ -387,7 +391,6 @@ int ui_display_transaction_bs_choice(bool is_blind_signed) {
         G_context.state = STATE_NONE;
         return io_send_sw(SW_BAD_STATE);
     }
-    PRINTF("=> io_recv_command bs_choice\n");
     if (is_blind_signed) {
         explicit_bzero(&pairList, sizeof(pairList));
         pairs[0].item = BLIND_SIGN_TX;
