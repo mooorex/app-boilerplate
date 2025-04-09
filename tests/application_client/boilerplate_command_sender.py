@@ -8,13 +8,13 @@ from ragger.bip import pack_derivation_path
 
 MAX_APDU_LEN: int = 255
 
-CLA: int = 0xE0
+CLA: int = 0x80
 
 class P1(IntEnum):
     # Parameter 1 for first APDU number.
     P1_START = 0x00
     # Parameter 1 for maximum APDU number.
-    P1_MAX   = 0x03
+    P1_MAX   = 0x04
     # Parameter 1 for screen confirmation for GET_PUBLIC_KEY.
     P1_CONFIRM = 0x01
 
@@ -25,10 +25,11 @@ class P2(IntEnum):
     P2_MORE = 0x80
 
 class InsType(IntEnum):
-    GET_VERSION    = 0x03
-    GET_APP_NAME   = 0x04
+    SIGN_TX = 0x02
+    GET_VERSION = 0x03
+    GET_APP_NAME = 0x04
     GET_PUBLIC_KEY = 0x05
-    SIGN_TX        = 0x06
+    SIGN_PERSONAL_MESSAGE = 0x07
 
 class Errors(IntEnum):
     SW_DENY                    = 0x6985
@@ -45,6 +46,12 @@ class Errors(IntEnum):
     SW_TX_HASH_FAIL            = 0xB006
     SW_BAD_STATE               = 0xB007
     SW_SIGNATURE_FAIL          = 0xB008
+    SW_PERSONAL_MSG_PARSING_FAIL = 0xB009
+    SW_PERSONAl_MSG_HASH_FAIL    = 0xB00A
+    SW_WRONG_PERSONAL_MSG_LENGTH = 0xB00B
+    SW_TX_PAYLOAD_PARSING_FAIL = 0xB00C
+    SW_OEP4_TX_PARSING_FAIL    = 0xB00D
+    SW_OEP4_TX_PAYLOAD_PARSING_FAIL = 0xB00E
 
 
 def split_message(message: bytes, max_size: int) -> List[bytes]:
@@ -122,6 +129,32 @@ class BoilerplateCommandSender:
                                          p2=P2.P2_LAST,
                                          data=messages[-1]) as response:
             yield response
+
+    @contextmanager
+    def sign_personal_msg(self, path: str, personalmsg: bytes) -> Generator[None, None, None]:
+        self.backend.exchange(cla=CLA,
+                              ins=InsType.SIGN_PERSONAL_MESSAGE,
+                              p1=P1.P1_START,
+                              p2=P2.P2_MORE,
+                              data=pack_derivation_path(path))
+        messages = split_message(personalmsg, MAX_APDU_LEN)
+        idx: int = P1.P1_START + 1
+
+        for msg in messages[:-1]:
+            self.backend.exchange(cla=CLA,
+                                  ins=InsType.SIGN_PERSONAL_MESSAGE,
+                                  p1=idx,
+                                  p2=P2.P2_MORE,
+                                  data=msg)
+            idx += 1
+
+        with self.backend.exchange_async(cla=CLA,
+                                         ins=InsType.SIGN_PERSONAL_MESSAGE,
+                                         p1=idx,
+                                         p2=P2.P2_LAST,
+                                         data=messages[-1]) as response:
+            yield response
+
 
     def get_async_response(self) -> Optional[RAPDU]:
         return self.backend.last_async_response

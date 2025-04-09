@@ -100,6 +100,7 @@ Similarly, there is no prefix indicating the length.
 
 #include "parse.h"
 #include "contract.h"
+#include "../globals.h"
 
 #if defined(TEST) || defined(FUZZ)
 #include "assert.h"
@@ -186,7 +187,10 @@ parser_status_e transaction_deserialize_header(buffer_t *buf, transaction_t *tx)
     if (!buffer_read_u64(buf, &tx->header.gas_limit, LE) || tx->header.gas_limit < GAS_LIMIT_MIN) {
         return BYTECODE_PARSING_ERROR;
     }
-
+    get_ong_fee(tx->header.gas_price,
+                tx->header.gas_limit,
+                G_context.display_data.gas_fee,
+                sizeof(G_context.display_data.gas_fee));
     // payer
     tx->header.payer = (uint8_t *) (buf->ptr + buf->offset);
     if (!buffer_seek_cur(buf, ADDRESS_LEN)) {
@@ -337,8 +341,8 @@ parser_status_e transaction_deserialize_method(buffer_t *buf, transaction_t *tx)
     method_intent_length = sEnd - 1 - cur;
 
     if (!buffer_seek_set(buf, cur) || method_intent_length == 0 ||
-        !parse_method(buf, &(tx->method.name)) ||
-        tx->method.name.len != method_intent_length || !buffer_seek_set(buf, sBegin)) {
+        !parse_method(buf, &(tx->method.name)) || tx->method.name.len != method_intent_length ||
+        !buffer_seek_set(buf, sBegin)) {
         return BYTECODE_PARSING_ERROR;
     }
 
@@ -372,27 +376,42 @@ parser_status_e native_transfer_deserialize_params(buffer_t *buf, transaction_t 
 parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
-
     // If the method is transfer or transferV2 for ONG or ONT, call
     // native_transfer_deserialize_params
     if (tx->contract.type == NATIVE_CONTRACT) {
-        if ((tx->method.name.len == strlen("transfer") &&
-             memcmp(tx->method.name.data, "transfer", tx->method.name.len) == 0) ||
-            (tx->method.name.len == strlen("transferV2") &&
-             memcmp(tx->method.name.data, "transferV2", tx->method.name.len) == 0)) {
-            return native_transfer_deserialize_params(buf, tx);
+        bool is_ont = memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
+        bool is_ong = memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
+        if (is_ont || is_ong) {
+            bool is_transfer =
+                (tx->method.name.len == strlen(METHOD_TRANSFER) &&
+                 memcmp(tx->method.name.data, METHOD_TRANSFER, tx->method.name.len) == 0);
+            bool is_transfer_v2 =
+                (tx->method.name.len == strlen(METHOD_TRANSFER_V2) &&
+                 memcmp(tx->method.name.data, METHOD_TRANSFER_V2, tx->method.name.len) == 0);
+            bool is_transfer_from_v2 =
+                (tx->method.name.len == strlen(METHOD_TRANSFER_FROM_V2) &&
+                 memcmp(tx->method.name.data, METHOD_TRANSFER_FROM_V2, tx->method.name.len) == 0);
+            bool is_approve_v2 =
+                (tx->method.name.len == strlen(METHOD_APPROVE_V2) &&
+                 memcmp(tx->method.name.data, METHOD_APPROVE_V2, tx->method.name.len) == 0);
+            tx->contract.token_decimals = is_ont ? 0 : 9;
+            if (is_transfer_v2 || is_transfer_from_v2 || is_approve_v2) {
+                tx->contract.token_decimals += 9;
+            }
+            if (is_transfer || is_transfer_v2) {
+                return native_transfer_deserialize_params(buf, tx);
+            }
         }
-
         if (!parse_constant(buf, OPCODE_ST_BEGIN, ARRAY_LENGTH(OPCODE_ST_BEGIN))) {
             return BYTECODE_PARSING_ERROR;
         }
     }
-
     size_t params_num = 0;
-    
     for (size_t i = 0; i < ARRAY_LENGTH(txPayload); i++) {
         if (memcmp(tx->contract.addr.data, txPayload[i].contract_addr, ADDRESS_LEN) == 0) {
-            tx->contract.token_decimals = txPayload[i].token_decimals;
+            if (tx->contract.type != NATIVE_CONTRACT) {
+                tx->contract.token_decimals = txPayload[i].token_decimals;
+            }
             for (const tx_method_signature_t *methods = txPayload[i].methods; methods->name != NULL;
                  ++methods) {
                 if (tx->method.name.len == strlen(methods->name) &&
@@ -406,12 +425,10 @@ parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx)
             break;
         }
     }
-
     if (tx->contract.type == NATIVE_CONTRACT &&
         !parse_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
         return BYTECODE_PARSING_ERROR;
     }
-
     tx_parameter_t params_num_t;
     uint64_t params_num_out;
     if (tx->contract.type == NEOVM_CONTRACT &&
@@ -421,11 +438,9 @@ parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx)
          !parse_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK)))) {
         return BYTECODE_PARSING_ERROR;
     }
-
     if (tx->contract.type == WASMVM_CONTRACT &&
         !parse_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END))) {
         return BYTECODE_PARSING_ERROR;
     }
-
     return PARSING_OK;
 }

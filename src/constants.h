@@ -3,7 +3,7 @@
 /**
  * Instruction class of the Boilerplate application.
  */
-#define CLA 0xE0
+#define CLA 0x80
 
 /**
  * Length of APPNAME variable in the Makefile.
@@ -23,14 +23,13 @@
 /**
  * Maximum transaction length (bytes).
  */
-#define MAX_TRANSACTION_LEN 510
-
+#define MAX_TRANSACTION_LEN 1024
+/**
+ * Maximum personal message length (bytes).
+ */
+#define MAX_PERSONAL_MSG_LEN 1024
 /**
  * Maximum signature length (bytes).
  */
 #define MAX_DER_SIG_LEN 72
 
-/**
- * Exponent used to convert mBOL to BOL unit (N BOL = N * 10^3 mBOL).
- */
-#define EXPONENT_SMALLEST_UNIT 3

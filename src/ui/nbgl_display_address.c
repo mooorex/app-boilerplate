@@ -35,8 +35,10 @@
 #include "validate.h"
 #include "tx_types.h"
 #include "menu.h"
+#include "types.h"
+#include "../transaction/utils.h"
 
-static char g_address[43];
+static char g_address[40];
 
 static void review_choice(bool confirm) {
     // Answer, display a status page and go back to main
@@ -49,28 +51,22 @@ static void review_choice(bool confirm) {
 }
 
 int ui_display_address() {
-    if (G_context.req_type != CONFIRM_ADDRESS || G_context.state != STATE_NONE) {
-        G_context.state = STATE_NONE;
-        return io_send_sw(SW_BAD_STATE);
-    }
-
-    memset(g_address, 0, sizeof(g_address));
-    uint8_t address[ADDRESS_LEN] = {0};
-    // if (!address_from_pubkey(G_context.pk_info.raw_public_key, address, sizeof(address))) {
-    //     return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    // }
-
-    if (format_hex(address, sizeof(address), g_address, sizeof(g_address)) == -1) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
-
-    nbgl_useCaseAddressReview(g_address,
-                              NULL,
-                              &ICON_APP_BOILERPLATE,
-                              "Verify BOL address",
-                              NULL,
-                              review_choice);
-    return 0;
+        if (G_context.req_type != CONFIRM_ADDRESS || G_context.state != STATE_NONE) {
+            G_context.state = STATE_NONE;
+            return io_send_sw(SW_BAD_STATE);
+        }
+    
+        memset(g_address, 0, sizeof(g_address));
+        if (!ont_address_by_pubkey(G_context.pk_info.raw_public_key, g_address, sizeof(g_address))) {
+            return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+        }
+        nbgl_useCaseAddressReview(g_address,
+                                  NULL,
+                                  &ICON_APP_BOILERPLATE,
+                                  VERIFY_ONT_ADDRESS,
+                                  NULL,
+                                  review_choice);
+        return 0;
 }
 
 #endif

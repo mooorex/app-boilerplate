@@ -29,7 +29,8 @@
 #include "globals.h"
 #include "display.h"
 #include "tx_types.h"
-#include "deserialize.h"
+#include "../transaction/deserialize.h"
+#include "../transaction/utils.h"
 
 int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
     if (chunk == 0) {  // first APDU, parse BIP32 path
@@ -43,7 +44,10 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
                                     (size_t) G_context.bip32_path_len)) {
             return io_send_sw(SW_WRONG_DATA_LENGTH);
         }
-
+        if (!ont_address_from_pubkey(G_context.display_data.signer,
+                                     sizeof(G_context.display_data.signer))) {
+            return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
+        }
         return io_send_sw(SW_OK);
 
     } else {  // parse transaction
@@ -60,7 +64,6 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
             return io_send_sw(SW_TX_PARSING_FAIL);
         }
         G_context.tx_info.raw_tx_len += cdata->size;
-
         if (more) {
             // more APDUs with transaction part are expected.
             // Send a SW_OK to signal that we have received the chunk
@@ -74,23 +77,34 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
                             .offset = 0};
 
             parser_status_e status = transaction_deserialize(&buf, &G_context.tx_info.transaction);
-            PRINTF("Parsing status: %d.\n", status);
-            if (status != PARSING_OK) {
-                return io_send_sw(SW_TX_PARSING_FAIL);
-            }
-
-            G_context.state = STATE_PARSED;
-
-            if (cx_keccak_256_hash(G_context.tx_info.raw_tx,
-                                   G_context.tx_info.raw_tx_len,
-                                   G_context.tx_info.m_hash) != CX_OK) {
-                return io_send_sw(SW_TX_HASH_FAIL);
-            }
-
-            PRINTF("Hash: %.*H\n", sizeof(G_context.tx_info.m_hash), G_context.tx_info.m_hash);
-
+            return (status != PARSING_OK && !N_storage.blind_signed_allowed)
+                       ? io_send_sw(SW_TX_PARSING_FAIL)
+                       : handler_hash_tx_and_display_tx(status);
         }
     }
-
     return 0;
+}
+
+int handler_hash_tx_and_display_tx(int status) {
+    if (status != PARSING_OK && !N_storage.blind_signed_allowed) {
+        return io_send_sw(SW_TX_PARSING_FAIL);
+    }
+    uint8_t second_hash[32];
+    if (cx_sha256_hash(G_context.tx_info.raw_tx,
+                       G_context.tx_info.raw_tx_len,
+                       G_context.tx_info.m_hash) != CX_OK ||
+        cx_sha256_hash(G_context.tx_info.m_hash, 32, second_hash) != CX_OK) {
+        return io_send_sw(SW_TX_HASH_FAIL);
+    }
+    memcpy(G_context.tx_info.m_hash, second_hash, 32);
+    if (cx_sha256_hash(G_context.tx_info.m_hash, 32, second_hash) != CX_OK) {
+        return io_send_sw(SW_TX_HASH_FAIL);
+    }
+
+    memcpy(G_context.tx_info.m_hash, second_hash, 32);
+    explicit_bzero(&second_hash, sizeof(second_hash));
+    G_context.state = STATE_PARSED;
+    return (status != PARSING_OK && N_storage.blind_signed_allowed)
+               ? ui_display_blind_signed_transaction()
+               : ui_display_transaction();
 }

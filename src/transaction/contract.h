@@ -19,6 +19,24 @@ static const uint8_t MYT_ADDR[] = {0xff, 0x92, 0xa1, 0xa3, 0x41, 0x8d, 0x53, 0x6
                                    0xaf, 0x98, 0xd5, 0xf1, 0xad, 0xd0, 0x5f, 0x15, 0xed, 0x19};
 // #endif
 
+// Common method name constants
+#define METHOD_TRANSFER "transfer"
+#define METHOD_TRANSFER_FROM "transferFrom"
+#define METHOD_APPROVE "approve"
+#define METHOD_TRANSFER_V2 "transferV2"
+#define METHOD_TRANSFER_FROM_V2 "transferFromV2"
+#define METHOD_APPROVE_V2 "approveV2"
+#define METHOD_REGISTER_CANDIDATE "registerCandidate"
+#define METHOD_QUIT_NODE "quitNode"
+#define METHOD_ADD_INIT_POS "addInitPos"
+#define METHOD_REDUCE_INIT_POS "reduceInitPos"
+#define METHOD_CHANGE_MAX_AUTH "changeMaxAuthorization"
+#define METHOD_SET_FEE_PERCENTAGE "setFeePercentage"
+#define METHOD_AUTHORIZE_FOR_PEER "authorizeForPeer"
+#define METHOD_UNAUTHORIZE_FOR_PEER "unAuthorizeForPeer"
+#define METHOD_WITHDRAW "withdraw"
+#define METHOD_WITHDRAW_FEE "withdrawFee"
+
 typedef struct {
     const char *name;
     const tx_parameter_type_e *parameters;
@@ -32,81 +50,65 @@ typedef struct {
 
 // Method arrays
 static const tx_method_signature_t native_token_methods[] = {
-    {.name = "transfer",
+    {.name = METHOD_TRANSFER,
      .parameters = (const tx_parameter_type_e[]) {PARAM_TRANSFER_STATE_LIST, PARAM_END}},
-    {.name = "transferFrom",
+    {.name = METHOD_TRANSFER_FROM,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_TRANSFER_STATE, PARAM_END}},
-    {.name = "approve",
+    {.name = METHOD_APPROVE,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
-    {.name = "transferV2",
+    {.name = METHOD_TRANSFER_V2,
      .parameters = (const tx_parameter_type_e[]) {PARAM_TRANSFER_STATE_LIST, PARAM_END}},
-    {.name = "transferFromV2",
+    {.name = METHOD_TRANSFER_FROM_V2,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_TRANSFER_STATE, PARAM_END}},
-    {.name = "approveV2",
+    {.name = METHOD_APPROVE_V2,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
-    {.name = NULL}};
+    {.name = NULL}
+};
 
 static const tx_method_signature_t neovm_oep4_token_methods[] = {
-    {.name = "transfer",
+    {.name = METHOD_TRANSFER,
      .parameters = (const tx_parameter_type_e[]) {PARAM_AMOUNT, PARAM_ADDR, PARAM_ADDR, PARAM_END}},
-    {.name = "transferFrom",
-     .parameters = (const tx_parameter_type_e[]) {PARAM_AMOUNT,
-                                                  PARAM_ADDR,
-                                                  PARAM_ADDR,
-                                                  PARAM_ADDR,
-                                                  PARAM_END}},
-    {.name = "approve",
+    {.name = METHOD_TRANSFER_FROM,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_AMOUNT, PARAM_ADDR, PARAM_ADDR, PARAM_ADDR, PARAM_END}},
+    {.name = METHOD_APPROVE,
      .parameters = (const tx_parameter_type_e[]) {PARAM_AMOUNT, PARAM_ADDR, PARAM_ADDR, PARAM_END}},
-    {.name = NULL}};
+    {.name = NULL}
+};
 
 static const tx_method_signature_t wasmvm_oep4_token_methods[] = {
-    {.name = "transfer",
-     .parameters =
-         (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_UINT128, PARAM_END}},
-    {.name = "transferFrom",
-     .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR,
-                                                  PARAM_ADDR,
-                                                  PARAM_ADDR,
-                                                  PARAM_UINT128,
-                                                  PARAM_END}},
-    {.name = "approve",
-     .parameters =
-         (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_UINT128, PARAM_END}},
-    {.name = NULL}};
+    {.name = METHOD_TRANSFER,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_UINT128, PARAM_END}},
+    {.name = METHOD_TRANSFER_FROM,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_ADDR, PARAM_UINT128, PARAM_END}},
+    {.name = METHOD_APPROVE,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_ADDR, PARAM_UINT128, PARAM_END}},
+    {.name = NULL}
+};
+
 
 static const tx_method_signature_t native_governance_methods[] = {
-    {.name = "registerCandidate",
-     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY,
-                                                  PARAM_ADDR,
-                                                  PARAM_AMOUNT,
-                                                  PARAM_ONTID,
-                                                  PARAM_AMOUNT,
-                                                  PARAM_END}},
-    {.name = "quitNode",
+    {.name = METHOD_REGISTER_CANDIDATE,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_ONTID, PARAM_AMOUNT, PARAM_END}},
+    {.name = METHOD_QUIT_NODE,
      .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_END}},
-    {.name = "addInitPos",
-     .parameters =
-         (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
-    {.name = "reduceInitPos",
-     .parameters =
-         (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
-    {.name = "changeMaxAuthorization",
-     .parameters =
-         (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
-    {.name = "setFeePercentage",
-     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY,
-                                                  PARAM_ADDR,
-                                                  PARAM_AMOUNT,
-                                                  PARAM_AMOUNT,
-                                                  PARAM_END}},
-    {.name = "authorizeForPeer",
+    {.name = METHOD_ADD_INIT_POS,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
+    {.name = METHOD_REDUCE_INIT_POS,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
+    {.name = METHOD_CHANGE_MAX_AUTH,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_END}},
+    {.name = METHOD_SET_FEE_PERCENTAGE,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_AMOUNT, PARAM_END}},
+    {.name = METHOD_AUTHORIZE_FOR_PEER,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_PK_AMOUNT_PAIRS, PARAM_END}},
-    {.name = "unAuthorizeForPeer",
+    {.name = METHOD_UNAUTHORIZE_FOR_PEER,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_PK_AMOUNT_PAIRS, PARAM_END}},
-    {.name = "withdraw",
+    {.name = METHOD_WITHDRAW,
      .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_PK_AMOUNT_PAIRS, PARAM_END}},
-    {.name = "withdrawFee", .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_END}},
-    {.name = NULL}};
+    {.name = METHOD_WITHDRAW_FEE,
+     .parameters = (const tx_parameter_type_e[]) {PARAM_ADDR, PARAM_END}},
+    {.name = NULL}
+};
 
 // For native tokens, ONG's decimals are 9, while ONT's decimals are 0. Later, three new methods
 // were added: transferV2, transferFromV2, and approveV2. The decimals for these new methods are

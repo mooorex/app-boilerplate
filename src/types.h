@@ -7,15 +7,17 @@
 
 #include "constants.h"
 #include "tx_types.h"
+#include "personal-msg/types.h"
 
 /**
  * Enumeration with expected INS of APDU commands.
  */
 typedef enum {
-    GET_VERSION = 0x03,     /// version of the application
-    GET_APP_NAME = 0x04,    /// name of the application
-    GET_PUBLIC_KEY = 0x05,  /// public key of corresponding BIP32 path
-    SIGN_TX = 0x06          /// sign transaction with BIP32 path
+    GET_VERSION = 0x03,                /// version of the application
+    GET_APP_NAME = 0x04,               /// name of the application
+    GET_PUBLIC_KEY = 0x05,             /// public key of corresponding BIP32 path
+    SIGN_TX = 0x02,                    /// sign transaction with BIP32 path
+    SIGN_PERSONAL_MESSAGE = 0x07,      /// sign personal message
 } command_e;
 /**
  * Enumeration with parsing state.
@@ -31,7 +33,8 @@ typedef enum {
  */
 typedef enum {
     CONFIRM_ADDRESS,     /// confirm address derived from public key
-    CONFIRM_TRANSACTION  /// confirm transaction information
+    CONFIRM_TRANSACTION,  /// confirm transaction information
+    CONFIRM_MESSAGE     /// confirm message information
 } request_type_e;
 
 /**
@@ -55,6 +58,22 @@ typedef struct {
     uint8_t v;                            /// parity of y-coordinate of R in ECDSA signature
 } transaction_ctx_t;
 
+typedef struct {
+    uint8_t raw_msg[MAX_PERSONAL_MSG_LEN];  /// raw transaction serialized
+    size_t raw_msg_len;
+    personal_msg_info  msg_info;
+    uint8_t m_hash[32];                   /// message hash digest
+    uint8_t signature[MAX_DER_SIG_LEN];   /// transaction signature encoded in DER
+    uint8_t signature_len;                /// length of transaction signature
+    uint8_t v;
+} personal_msg_ctx_t;
+/**
+ * Structure for display data.
+ */
+typedef struct {
+    char signer[40];
+    char gas_fee[20];
+}display_data_t;
 /**
  * Structure for global context.
  */
@@ -63,9 +82,11 @@ typedef struct {
     union {
         pubkey_ctx_t pk_info;       /// public key context
         transaction_ctx_t tx_info;  /// transaction context
+        personal_msg_ctx_t personal_msg_info; /// personal msg context
     };
     request_type_e req_type;              /// user request
     uint32_t bip32_path[MAX_BIP32_PATH];  /// BIP32 path
     uint8_t bip32_path_len;               /// length of BIP32 path
+    display_data_t display_data;              ///display data
 } global_ctx_t;
 

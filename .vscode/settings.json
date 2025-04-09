@@ -1,28 +1,30 @@
 {
     "files.associations": {
-        "*.h": "c"
+        "*.h": "c",
+        "__config": "c",
+        "__locale": "c",
+        "cstdlib": "c",
+        "memory_resource": "c",
+        "locale": "c",
+        "ostream": "c",
+        "system_error": "c",
+        "typeinfo": "c",
+        "version": "c",
+        "string": "c",
+        "string_view": "c",
+        "bitset": "c",
+        "initializer_list": "c"
     },
     "ledgerDevTools.appSettings": {
-        "selectedUseCase": "release",
-        "selectedDevice": "Nano X",
+        "selectedUseCase": "debug",
+        "selectedDevice": "Stax",
         "selectedVariant": "BOL",
         "testsList": [
-            "test_app_mainmenu",
-            "test_app_name",
-            "test_bad_cla",
-            "test_bad_ins",
-            "test_wrong_p1p2",
-            "test_wrong_data_length",
-            "test_invalid_state",
             "test_get_app_and_version",
             "test_get_public_key_no_confirm",
             "test_get_public_key_confirm_accepted",
             "test_get_public_key_confirm_refused",
-            "test_sign_tx_short_tx",
-            "test_sign_tx_short_tx_blind_sign",
-            "test_sign_tx_long_tx",
-            "test_sign_tx_refused",
-            "test_version"
+            "test_sign_tx_short_tx"
         ]
     }
 }

@@ -43,7 +43,8 @@ typedef enum {
     TO_PARSING_ERROR = -2,
     VALUE_PARSING_ERROR = -3,
     WRONG_LENGTH_ERROR = -7,
-    BYTECODE_PARSING_ERROR = -8
+    BYTECODE_PARSING_ERROR = -8,
+    PERSONAL_MESSAGE_PARSING_ERROR = -9
 } parser_status_e;
 
 

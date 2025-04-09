@@ -23,3 +23,5 @@
  *
  */
 int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more);
+
+int handler_hash_tx_and_display_tx(int status);

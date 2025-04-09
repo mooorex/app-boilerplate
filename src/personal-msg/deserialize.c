@@ -14,16 +14,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *****************************************************************************/
+#include "buffer.h"
 
-#include <stdint.h>   // uint*_t
-#include <stdbool.h>  // bool
-#include <stddef.h>   // size_t
-#include <string.h>   // memmove
-
-#include "write.h"
-#include "varint.h"
-
-#include "serialize.h"
+#include "deserialize.h"
+#include "constants.h"
+#include "types.h"
+#include "../globals.h"
+#include "../transaction/utils.h"
 
 #if defined(TEST) || defined(FUZZ)
 #include "assert.h"
@@ -32,12 +29,18 @@
 #include "ledger_assert.h"
 #endif
 
-int transaction_serialize(const transaction_t *tx, uint8_t *out, size_t out_len) {
-    size_t offset = 0;
+parser_status_e personal_msg_deserialize(buffer_t *buf, personal_msg_info *info) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(info != NULL, "NULL personal msg");
+    if (buf->size > MAX_PERSONAL_MSG_LEN) {
+        return WRONG_LENGTH_ERROR;
+    }
+    // personal msg
+    info->personal_msg = (uint8_t *) (buf->ptr + buf->offset);
 
-    LEDGER_ASSERT(tx != NULL, "NULL tx");
-    LEDGER_ASSERT(out != NULL, "NULL out");
+    if (!buffer_seek_cur(buf, buf->size)) {
+        return PERSONAL_MESSAGE_PARSING_ERROR;
+    }
 
-
-    return (int) offset;
+    return (buf->offset == buf->size) ? PARSING_OK : WRONG_LENGTH_ERROR;
 }
