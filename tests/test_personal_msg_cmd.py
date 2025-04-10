@@ -1,4 +1,3 @@
-"""
 import pytest
 
 from application_client.boilerplate_personal_msg import PersonalMsg
@@ -8,7 +7,6 @@ from application_client.boilerplate_response_unpacker import unpack_get_public_k
 from ragger.error import ExceptionRAPDU
 from utils import check_signature_validity
 from utils import checkpersonal_signature_validity
-from utils import utf8_strlen
 from utils import int_byte
 import logging
 
@@ -77,7 +75,7 @@ def test_sign_personal_msg_long_msg(backend, scenario_navigator):
     with client.sign_personal_msg(path=path, personalmsg=personalmsg):
         scenario_navigator.review_approve()
 
-    personalmsg = SIGN_MAGIC + str(utf8_strlen(str_personal_msg)).encode() + personalmsg
+    personalmsg = SIGN_MAGIC + str(len(str_personal_msg)).encode() + personalmsg
 
     response = client.get_async_response().data
     _, der_sig, _ = unpack_sign_personal_msg_response(response)
@@ -105,4 +103,3 @@ def test_sign_personal_msg_refused(backend, scenario_navigator):
     # Assert that we have received a refusal
     assert e.value.status == Errors.SW_DENY
     assert len(e.value.data) == 0
-"""

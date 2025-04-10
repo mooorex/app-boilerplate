@@ -50,7 +50,6 @@ static void personal_msg_review_choice(bool confirm) {
     }
 }
 
-
 // Public function to start the personal msg review
 // - Check if the app is in the right state for personal msg review
 // - Display the first screen of the personal msg review
@@ -63,24 +62,12 @@ int ui_display_personal_msg_choice() {
     explicit_bzero(pairs, sizeof(pairs));
     explicit_bzero(g_msg, sizeof(g_msg));
 
-    const size_t sign_magic_len = sizeof(SIGN_MAGIC) - 2;
-    memcpy(g_msg, SIGN_MAGIC, sign_magic_len);
-
-    int msglen = G_context.personal_msg_info.raw_msg_len;
-    char lengthStr[10];
-    snprintf(lengthStr, sizeof(lengthStr), "%d", msglen);
-    const size_t lengthStrLen = strlen(lengthStr);
-
-    const size_t maxCopyLen = sizeof(g_msg) - sign_magic_len - lengthStrLen - 1;
-
-    memcpy(g_msg + sign_magic_len, lengthStr, lengthStrLen);
+    const size_t maxCopyLen = sizeof(g_msg) - 1;
 
     const size_t copyLen = MIN(G_context.personal_msg_info.raw_msg_len, maxCopyLen);
-    memcpy(g_msg + sign_magic_len + lengthStrLen,
-           G_context.personal_msg_info.msg_info.personal_msg,
-           copyLen);
+    memcpy(g_msg, G_context.personal_msg_info.msg_info.personal_msg, copyLen);
 
-    g_msg[sign_magic_len + lengthStrLen + copyLen] = '\0';
+    g_msg[copyLen] = '\0';
 
     pairs[0].item = NBGL_MSG;
     pairs[0].value = g_msg;
@@ -88,7 +75,7 @@ int ui_display_personal_msg_choice() {
     pairList.nbMaxLinesForValue = 0;
     pairList.nbPairs = 1;
     pairList.pairs = pairs;
-    
+
     nbgl_useCaseReview(TYPE_MESSAGE,
                        &pairList,
                        &ICON_APP_BOILERPLATE,
@@ -96,7 +83,6 @@ int ui_display_personal_msg_choice() {
                        NULL,
                        PERSONAL_MSG_CONTENT,
                        personal_msg_review_choice);
-                       
 
     return 0;
 }
