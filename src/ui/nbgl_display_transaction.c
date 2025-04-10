@@ -39,403 +39,375 @@
 #include "types.h"
 #include "../transaction/contract.h"
 #include "../transaction/utils.h"
-// Buffer where the transaction amount string is written
-static char g_amount[40];
-// Buffer where the transaction address string is written
-static char g_address[40];
-static char g_peer_pubkey[66];
-static char g_from[40];
-static char g_to[40];
-static char g_pubkey_number[20];
-static char g_title[60];
-static char g_title_two[60];
-static char g_title_three[60];
-static char g_peer_pubkey_1[68];
-static char g_peer_pubkey_2[68];
 
+
+#define MAX_BUFFER_LEN 68  
+#define NUM_BUFFERS    11  
+
+typedef enum {
+    BUFFER_AMOUNT = 0,
+    BUFFER_ADDRESS,
+    BUFFER_FROM,
+    BUFFER_TO,
+    BUFFER_PEER_PUBKEY,
+    BUFFER_PEER_PUBKEY_1,
+    BUFFER_PEER_PUBKEY_2,
+    BUFFER_PUBKEY_NUMBER,
+    BUFFER_TITLE,
+    BUFFER_TITLE_TWO,
+    BUFFER_TITLE_THREE
+} buffer_index_e;
+
+static char g_buffers[NUM_BUFFERS][MAX_BUFFER_LEN];
 static nbgl_contentTagValue_t pairs[10];
 static nbgl_contentTagValueList_t pairList;
 
-static const char *review_title;
-static const char *review_content;
-
-static inline bool is_method(const char *data, size_t len, const char *method) {
-    size_t method_len = strlen(method);
-    return len == method_len && memcmp(data, method, len) == 0;
-}
-
-static void set_display_title_content(void) {
-    review_title = TRANSFER_FROM_TITLE;
-    review_content = TRANSFER_FROM_CONTENT;
-
-    const char *method_data = G_context.tx_info.transaction.method.name.data;
-    size_t method_len = G_context.tx_info.transaction.method.name.len;
-    if (is_method(method_data, method_len, METHOD_ADD_INIT_POS)) {
-        review_title = ADD_INIT_POS_TITLE;
-        review_content = ADD_INIT_POS_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_APPROVE)) {
-        review_title = SIGN_APPROVE_TX_TITLE;
-        review_content = SIGN_APPROVE_TX_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_APPROVE_V2)) {
-        review_title = SIGN_APPROVE_TX_TITLE;
-        review_content = SIGN_APPROVE_TX_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_AUTHORIZE_FOR_PEER)) {
-        review_title = AUTHORIZE_FOR_PEER_TITLE;
-        review_content = AUTHORIZE_FOR_PEER_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_CHANGE_MAX_AUTH)) {
-        review_title = CHANGE_MAX_AUTHORIZATION_TITLE;
-        review_content = CHANGE_MAX_AUTHORIZATION_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_TRANSFER)) {
-        review_title = OEP4_TX_TITLE;
-        review_content = OEP4_TX_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_QUIT_NODE)) {
-        review_title = QUIT_NODE_TITLE;
-        review_content = QUIT_NODE_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_REDUCE_INIT_POS)) {
-        review_title = REDUCE_INIT_POS_TITLE;
-        review_content = REDUCE_INIT_POS_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_REGISTER_CANDIDATE)) {
-        review_title = REGISTER_CANDIDATE_TITLE;
-        review_content = REGISTER_CANDIDATE_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_SET_FEE_PERCENTAGE)) {
-        review_title = SET_FEE_PERCENTAGE_TITLE;
-        review_content = SET_FEE_PERCENTAGE_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_TRANSFER_V2)) {
-        review_title = NATIVE_ONG_OR_ONT_TRANSFER_TITLE;
-        review_content = NATIVE_ONG_OR_ONT_TRANSFER_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_TRANSFER_FROM_V2)) {
-        review_title = TRANSFER_FROM_TITLE;
-        review_content = TRANSFER_FROM_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_UNAUTHORIZE_FOR_PEER)) {
-        review_title = UN_AUTHORIZE_FOR_PEER_TITLE;
-        review_content = UN_AUTHORIZE_FOR_PEER_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_WITHDRAW_FEE)) {
-        review_title = WITHDRAW_FEE_TITLE;
-        review_content = WITHDRAW_FEE_CONTENT;
-    } else if (is_method(method_data, method_len, METHOD_WITHDRAW)) {
-        review_title = WITHDRAW_TITLE;
-        review_content = WITHDRAW_CONTENT;
-    } else {
-        PRINTF("No match found for method_data\n");
+static void clear_buffers(void) {
+    for (uint8_t i = 0; i < NUM_BUFFERS; i++) {
+        explicit_bzero(g_buffers[i], MAX_BUFFER_LEN);
     }
 }
 
-// called when long press button on 3rd page is long-touched or when reject footer is touched
+static void handle_transfer_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    // [from_addr, to_addr, amount] (Native/WASMVM)  [amount, from_addr, to_addr] (NEOVM)
+    uint8_t from_idx = (tx->contract.type == NEOVM_CONTRACT) ? 1 : 0;
+    uint8_t to_idx = (tx->contract.type == NEOVM_CONTRACT) ? 2 : 1;
+    uint8_t amount_idx = 2;
+
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], AMOUNT, PARAM_AMOUNT, amount_idx, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], FROM, PARAM_ADDR, from_idx, g_buffers[BUFFER_FROM], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], TO, PARAM_ADDR, to_idx, g_buffers[BUFFER_TO], MAX_BUFFER_LEN);
+}
+
+static void handle_transfer_from_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[sender_addr, from_addr, to_addr, amount] (Native/WASM) [amount, sender_addr, from_addr, to_addr] (NEOVM)
+    uint8_t sender_idx = (tx->contract.type == NEOVM_CONTRACT) ? 1 : 0;
+    uint8_t from_idx = (tx->contract.type == NEOVM_CONTRACT) ? 2 : 1;
+    uint8_t to_idx = (tx->contract.type == NEOVM_CONTRACT) ? 3 : 2;
+    uint8_t amount_idx = (tx->contract.type == NEOVM_CONTRACT) ? 0 : 3;
+
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], AMOUNT, PARAM_AMOUNT, amount_idx, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], SENDER, PARAM_ADDR, sender_idx, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], FROM, PARAM_ADDR, from_idx, g_buffers[BUFFER_FROM], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], TO, PARAM_ADDR, to_idx, g_buffers[BUFFER_TO], MAX_BUFFER_LEN);
+}
+
+static void handle_approve_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[from_addr, to_addr, amount] (Native/WASMVM)  [amount, from_addr, to_addr] (NEOVM)
+    uint8_t from_idx = (tx->contract.type == NEOVM_CONTRACT) ? 1 : 0;
+    uint8_t to_idx = (tx->contract.type == NEOVM_CONTRACT) ? 2 : 1;
+    uint8_t amount_idx = 2;
+
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], AMOUNT, PARAM_AMOUNT, amount_idx, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], FROM, PARAM_ADDR, from_idx, g_buffers[BUFFER_FROM], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], TO, PARAM_ADDR, to_idx, g_buffers[BUFFER_TO], MAX_BUFFER_LEN);
+}
+
+static void handle_register_candidate_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    // [peer_pubkey, address]
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY, PARAM_PUBKEY, 0, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 1, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    pairs[(*nbPairs)].item = STAKE_FEE; pairs[(*nbPairs)++].value = STAKE_FEE_ONG;
+}
+
+static void handle_quit_node_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    // [peer_pubkey, address]
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY, PARAM_PUBKEY, 0, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 1, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+}
+
+static void handle_add_init_pos_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[peer_pubkey, address, amount]
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY, PARAM_PUBKEY, 0, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 1, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], POS, PARAM_AMOUNT, 2, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+}
+
+static void handle_reduce_init_pos_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[peer_pubkey, address, amount]
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY, PARAM_PUBKEY, 0, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 1, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], AMOUNT, PARAM_AMOUNT, 2, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+}
+
+static void handle_change_max_auth_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    // [peer_pubkey, address, amount]
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY, PARAM_PUBKEY, 0, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 1, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], MAX_AUTHORIZE, PARAM_AMOUNT, 2, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+}
+
+static void handle_set_fee_percentage_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[peer_pubkey, address, amount]
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY, PARAM_PUBKEY, 0, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 1, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], PEER_COST, PARAM_AMOUNT, 2, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+}
+
+static void handle_authorize_for_peer_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[address, pubkey_num, pubkey1, pubkey2, ...]
+    uint8_t pubkey_num = getValueByLen(tx->method.parameters[1].data, tx->method.parameters[1].len);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 0, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    
+    if (pubkey_num >= 1) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 1", PARAM_PUBKEY, 2, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num >= 2) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 2", PARAM_PUBKEY, 3, g_buffers[BUFFER_PEER_PUBKEY_1], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num >= 3) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 3", PARAM_PUBKEY, 4, g_buffers[BUFFER_PEER_PUBKEY_2], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num > 1) {
+        format_u64(g_buffers[BUFFER_PUBKEY_NUMBER], MAX_BUFFER_LEN, pubkey_num);
+        pairs[(*nbPairs)].item = NODE_AMOUNT; pairs[(*nbPairs)++].value = g_buffers[BUFFER_PUBKEY_NUMBER];
+    }
+}
+
+static void handle_unauthorize_for_peer_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[address, pubkey_num, pubkey1, pubkey2, ...]
+    uint8_t pubkey_num = getValueByLen(tx->method.parameters[1].data, tx->method.parameters[1].len);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 0, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    
+    if (pubkey_num >= 1) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 1", PARAM_PUBKEY, 2, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num >= 2) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 2", PARAM_PUBKEY, 3, g_buffers[BUFFER_PEER_PUBKEY_1], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num >= 3) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 3", PARAM_PUBKEY, 4, g_buffers[BUFFER_PEER_PUBKEY_2], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num > 1) {
+        format_u64(g_buffers[BUFFER_PUBKEY_NUMBER], MAX_BUFFER_LEN, pubkey_num);
+        pairs[(*nbPairs)].item = NODE_AMOUNT; pairs[(*nbPairs)++].value = g_buffers[BUFFER_PUBKEY_NUMBER];
+    }
+}
+
+static void handle_withdraw_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    //[address, pubkey_num, pubkey1, pubkey2, ..., amount]
+    uint8_t pubkey_num = getValueByLen(tx->method.parameters[1].data, tx->method.parameters[1].len);
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 0, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+    
+    if (pubkey_num >= 1) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 1", PARAM_PUBKEY, 2, g_buffers[BUFFER_PEER_PUBKEY], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num >= 2) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 2", PARAM_PUBKEY, 3, g_buffers[BUFFER_PEER_PUBKEY_1], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num >= 3) {
+        parse_param_to_pair(tx, &pairs[(*nbPairs)++], NBGL_PEER_PUBKEY " 3", PARAM_PUBKEY, 4, g_buffers[BUFFER_PEER_PUBKEY_2], MAX_BUFFER_LEN);
+    }
+    if (pubkey_num > 1) {
+        format_u64(g_buffers[BUFFER_PUBKEY_NUMBER], MAX_BUFFER_LEN, pubkey_num);
+        pairs[(*nbPairs)].item = NODE_AMOUNT; pairs[(*nbPairs)++].value = g_buffers[BUFFER_PUBKEY_NUMBER];
+    }
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], TOTAL_WITHDRAW, PARAM_AMOUNT, 2, g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN);
+}
+
+static void handle_withdraw_fee_params(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs) {
+    parse_param_to_pair(tx, &pairs[(*nbPairs)++], ADDRESS, PARAM_ADDR, 0, g_buffers[BUFFER_ADDRESS], MAX_BUFFER_LEN);
+}
+
+void parse_param_to_pair(transaction_t *tx, nbgl_contentTagValue_t *pair, const char *tag, 
+                         tx_parameter_type_e type, uint8_t param_idx, char *buffer, size_t buffer_len) {
+    pair->item = tag;
+    pair->value = buffer;
+    explicit_bzero(buffer, buffer_len);
+
+    tx_parameter_t *param = &tx->method.parameters[param_idx];
+    switch (type) {
+        case PARAM_ADDR:
+            script_hash_to_address(buffer, buffer_len, param->data);
+            break;
+        case PARAM_AMOUNT:{
+            uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN];
+            get_ont_addr(ont_addr);
+            get_ong_addr(ong_addr);
+            get_token_value(param->len, param->data, tx->contract.token_decimals, buffer, buffer_len);
+            if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0) strlcat(buffer, ONT_VIEW, buffer_len);
+            else if (memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0) strlcat(buffer, ONG_VIEW, buffer_len);
+            break;
+        }
+        case PARAM_PUBKEY:
+            memcpy(buffer, param->data, param->len);
+            buffer[param->len] = '\0';
+            break;
+        default:
+            break;
+    }
+}
+
+static const method_display_t *get_method_display(const transaction_t *tx) {
+    static method_display_t method; 
+
+    if (tx == NULL) {
+        PRINTF("Error: tx is NULL\n");
+        return NULL;
+    }
+
+    const char *method_data = tx->method.name.data;
+    size_t method_len = tx->method.name.len;
+
+    if (method_data == NULL || method_len == 0) {
+        PRINTF("Error: method_data is NULL or len=0\n");
+        return NULL;
+    }
+    if (method_len == strlen(METHOD_TRANSFER) && memcmp(method_data, METHOD_TRANSFER, method_len) == 0) {
+        method.method_name = METHOD_TRANSFER;
+        method.title = OEP4_TX_TITLE;
+        method.content = OEP4_TX_CONTENT;
+        method.param_handler = handle_transfer_params;
+    }
+    else if (method_len == strlen(METHOD_TRANSFER_V2) && memcmp(method_data, METHOD_TRANSFER_V2, method_len) == 0) {
+        method.method_name = METHOD_TRANSFER_V2;
+        method.title = NATIVE_ONG_OR_ONT_TRANSFER_TITLE;
+        method.content = NATIVE_ONG_OR_ONT_TRANSFER_CONTENT;
+        method.param_handler = handle_transfer_params;
+    }
+    else if (method_len == strlen(METHOD_TRANSFER_FROM) && memcmp(method_data, METHOD_TRANSFER_FROM, method_len) == 0) {
+        method.method_name = METHOD_TRANSFER_FROM;
+        method.title = TRANSFER_FROM_TITLE;
+        method.content = TRANSFER_FROM_CONTENT;
+        method.param_handler = handle_transfer_from_params;
+    }
+    else if (method_len == strlen(METHOD_TRANSFER_FROM_V2) && memcmp(method_data, METHOD_TRANSFER_FROM_V2, method_len) == 0) {
+        method.method_name = METHOD_TRANSFER_FROM_V2;
+        method.title = TRANSFER_FROM_TITLE;
+        method.content = TRANSFER_FROM_CONTENT;
+        method.param_handler = handle_transfer_from_params;
+    }
+    else if (method_len == strlen(METHOD_APPROVE) && memcmp(method_data, METHOD_APPROVE, method_len) == 0) {
+        method.method_name = METHOD_APPROVE;
+        method.title = SIGN_APPROVE_TX_TITLE;
+        method.content = SIGN_APPROVE_TX_CONTENT;
+        method.param_handler = handle_approve_params;
+    }
+    else if (method_len == strlen(METHOD_APPROVE_V2) && memcmp(method_data, METHOD_APPROVE_V2, method_len) == 0) {
+        method.method_name = METHOD_APPROVE_V2;
+        method.title = SIGN_APPROVE_TX_TITLE;
+        method.content = SIGN_APPROVE_TX_CONTENT;
+        method.param_handler = handle_approve_params;
+    }
+    else if (method_len == strlen(METHOD_REGISTER_CANDIDATE) && memcmp(method_data, METHOD_REGISTER_CANDIDATE, method_len) == 0) {
+        method.method_name = METHOD_REGISTER_CANDIDATE;
+        method.title = REGISTER_CANDIDATE_TITLE;
+        method.content = REGISTER_CANDIDATE_CONTENT;
+        method.param_handler = handle_register_candidate_params;
+    }
+    else if (method_len == strlen(METHOD_QUIT_NODE) && memcmp(method_data, METHOD_QUIT_NODE, method_len) == 0) {
+        method.method_name = METHOD_QUIT_NODE;
+        method.title = QUIT_NODE_TITLE;
+        method.content = QUIT_NODE_CONTENT;
+        method.param_handler = handle_quit_node_params;
+    }
+    else if (method_len == strlen(METHOD_ADD_INIT_POS) && memcmp(method_data, METHOD_ADD_INIT_POS, method_len) == 0) {
+        method.method_name = METHOD_ADD_INIT_POS;
+        method.title = ADD_INIT_POS_TITLE;
+        method.content = ADD_INIT_POS_CONTENT;
+        method.param_handler = handle_add_init_pos_params;
+    }
+    else if (method_len == strlen(METHOD_REDUCE_INIT_POS) && memcmp(method_data, METHOD_REDUCE_INIT_POS, method_len) == 0) {
+        method.method_name = METHOD_REDUCE_INIT_POS;
+        method.title = REDUCE_INIT_POS_TITLE;
+        method.content = REDUCE_INIT_POS_CONTENT;
+        method.param_handler = handle_reduce_init_pos_params;
+    }
+    else if (method_len == strlen(METHOD_CHANGE_MAX_AUTH) && memcmp(method_data, METHOD_CHANGE_MAX_AUTH, method_len) == 0) {
+        method.method_name = METHOD_CHANGE_MAX_AUTH;
+        method.title = CHANGE_MAX_AUTHORIZATION_TITLE;
+        method.content = CHANGE_MAX_AUTHORIZATION_CONTENT;
+        method.param_handler = handle_change_max_auth_params;
+    }
+    else if (method_len == strlen(METHOD_SET_FEE_PERCENTAGE) && memcmp(method_data, METHOD_SET_FEE_PERCENTAGE, method_len) == 0) {
+        method.method_name = METHOD_SET_FEE_PERCENTAGE;
+        method.title = SET_FEE_PERCENTAGE_TITLE;
+        method.content = SET_FEE_PERCENTAGE_CONTENT;
+        method.param_handler = handle_set_fee_percentage_params;
+    }
+    else if (method_len == strlen(METHOD_AUTHORIZE_FOR_PEER) && memcmp(method_data, METHOD_AUTHORIZE_FOR_PEER, method_len) == 0) {
+        method.method_name = METHOD_AUTHORIZE_FOR_PEER;
+        method.title = AUTHORIZE_FOR_PEER_TITLE;
+        method.content = AUTHORIZE_FOR_PEER_CONTENT;
+        method.param_handler = handle_authorize_for_peer_params;
+    }
+    else if (method_len == strlen(METHOD_UNAUTHORIZE_FOR_PEER) && memcmp(method_data, METHOD_UNAUTHORIZE_FOR_PEER, method_len) == 0) {
+        method.method_name = METHOD_UNAUTHORIZE_FOR_PEER;
+        method.title = UN_AUTHORIZE_FOR_PEER_TITLE;
+        method.content = UN_AUTHORIZE_FOR_PEER_CONTENT;
+        method.param_handler = handle_unauthorize_for_peer_params;
+    }
+    else if (method_len == strlen(METHOD_WITHDRAW) && memcmp(method_data, METHOD_WITHDRAW, method_len) == 0) {
+        method.method_name = METHOD_WITHDRAW;
+        method.title = WITHDRAW_TITLE;
+        method.content = WITHDRAW_CONTENT;
+        method.param_handler = handle_withdraw_params;
+    }
+    else if (method_len == strlen(METHOD_WITHDRAW_FEE) && memcmp(method_data, METHOD_WITHDRAW_FEE, method_len) == 0) {
+        method.method_name = METHOD_WITHDRAW_FEE;
+        method.title = WITHDRAW_FEE_TITLE;
+        method.content = WITHDRAW_FEE_CONTENT;
+        method.param_handler = handle_withdraw_fee_params;
+    }
+    else {
+        PRINTF("No matching method found\n");
+        return NULL;
+    }
+
+    PRINTF("Match found: %s\n", method.method_name);
+    return &method;
+}
+
 static void review_choice(bool confirm) {
-    // Answer, display a status page and go back to main
     validate_transaction(confirm);
-    if (confirm) {
-        nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_SIGNED, ui_menu_main);
-    } else {
-        nbgl_useCaseReviewStatus(STATUS_TYPE_TRANSACTION_REJECTED, ui_menu_main);
-    }
+    nbgl_useCaseReviewStatus(confirm ? STATUS_TYPE_TRANSACTION_SIGNED : STATUS_TYPE_TRANSACTION_REJECTED, ui_menu_main);
 }
 
-static uint8_t setTagValuePairs(void) {
-    uint8_t nbPairs = 0;
-    explicit_bzero(pairs, sizeof(pairs));
-
-#define ADD_PAIR(tagName, valueName)      \
-    do {                                  \
-        pairs[nbPairs].item = tagName;    \
-        pairs[nbPairs].value = valueName; \
-        nbPairs++;                        \
-    } while (0)
-
-    const char *method_data = G_context.tx_info.transaction.method.name.data;
-    size_t method_len = G_context.tx_info.transaction.method.name.len;
-
-    bool isCommonTx = is_method(method_data, method_len, METHOD_REGISTER_CANDIDATE) ||
-                      is_method(method_data, method_len, METHOD_QUIT_NODE) ||
-                      is_method(method_data, method_len, METHOD_ADD_INIT_POS) ||
-                      is_method(method_data, method_len, METHOD_REDUCE_INIT_POS) ||
-                      is_method(method_data, method_len, METHOD_CHANGE_MAX_AUTH) ||
-                      is_method(method_data, method_len, METHOD_SET_FEE_PERCENTAGE);
-
-    bool isCommonTx1 = is_method(method_data, method_len, METHOD_AUTHORIZE_FOR_PEER) ||
-                       is_method(method_data, method_len, METHOD_UNAUTHORIZE_FOR_PEER) ||
-                       is_method(method_data, method_len, METHOD_WITHDRAW) ||
-                       is_method(method_data, method_len, METHOD_WITHDRAW_FEE);
-
-    if (isCommonTx) {
-        script_hash_to_address(g_address,
-                               sizeof(g_address),
-                               G_context.tx_info.transaction.method.parameters[1].data);
-        ADD_PAIR(ADDRESS, g_address);
-        memcpy(g_peer_pubkey,
-               G_context.tx_info.transaction.method.parameters[0].data,
-               G_context.tx_info.transaction.method.parameters[0].len);
-        ADD_PAIR(NBGL_PEER_PUBKEY, g_peer_pubkey);
-    }
-    if (isCommonTx1) {
-        script_hash_to_address(g_address,
-                               sizeof(g_address),
-                               G_context.tx_info.transaction.method.parameters[0].data);
-        ADD_PAIR(ADDRESS, g_address);
-    }
-
-    if (is_method(method_data, method_len, METHOD_WITHDRAW) ||
-        is_method(method_data, method_len, METHOD_AUTHORIZE_FOR_PEER) ||
-        is_method(method_data, method_len, METHOD_UNAUTHORIZE_FOR_PEER)) {
-        uint8_t pubkey_number =
-            getValueByLen(G_context.tx_info.transaction.method.parameters[1].data,
-                          G_context.tx_info.transaction.method.parameters[1].len);
-        for (uint8_t i = 0; i < pubkey_number; i++) {
-            if (i > 2) {
-                break;
-            }
-            if (i == 0) {
-                memset(g_title, 0, sizeof(g_title));
-                memcpy(g_title, NBGL_PEER_PUBKEY, sizeof(NBGL_PEER_PUBKEY));
-                if (pubkey_number > 1) {
-                    strlcat(g_title, ONE, sizeof(g_title));
-                }
-                memcpy(g_peer_pubkey,
-                       G_context.tx_info.transaction.method.parameters[2].data,
-                       G_context.tx_info.transaction.method.parameters[2].len);
-                ADD_PAIR(g_title, g_peer_pubkey);
-            }
-            if (i == 1) {
-                memset(g_title_two, 0, sizeof(g_title_two));
-                memcpy(g_title_two, NBGL_PEER_PUBKEY, sizeof(NBGL_PEER_PUBKEY));
-                strlcat(g_title_two, TWO, sizeof(g_title_two));
-                memcpy(g_peer_pubkey_1,
-                       G_context.tx_info.transaction.method.parameters[3].data,
-                       G_context.tx_info.transaction.method.parameters[3].len);
-                ADD_PAIR(g_title_two, g_peer_pubkey_1);
-            }
-            if (i == 2) {
-                memset(g_title_three, 0, sizeof(g_title_three));
-                memcpy(g_title_three, NBGL_PEER_PUBKEY, sizeof(NBGL_PEER_PUBKEY));
-                strlcat(g_title_three, THREE, sizeof(g_title_three));
-                memcpy(g_peer_pubkey_2,
-                       G_context.tx_info.transaction.method.parameters[4].data,
-                       G_context.tx_info.transaction.method.parameters[4].len);
-                ADD_PAIR(g_title_three, g_peer_pubkey_2);
-            }
-        }
-        if (pubkey_number > 1) {
-            memset(g_pubkey_number, 0, sizeof(g_pubkey_number));
-            if (!format_u64(g_pubkey_number, sizeof(g_pubkey_number), pubkey_number)) {
-                return io_send_sw(SW_DISPLAY_AMOUNT_FAIL);
-            }
-            ADD_PAIR(NODE_AMOUNT, g_pubkey_number);
-        }
-    }
-
-    if ((isCommonTx || isCommonTx1) && (!is_method(method_data, method_len, METHOD_QUIT_NODE) &&
-                                        !is_method(method_data, method_len, METHOD_WITHDRAW_FEE))) {
-        const char *item = NULL;
-        if (is_method(method_data, method_len, METHOD_CHANGE_MAX_AUTH)) {
-            item = MAX_AUTHORIZE;
-        } else if (is_method(method_data, method_len, METHOD_SET_FEE_PERCENTAGE)) {
-            item = PEER_COST;
-        } else if ((is_method(method_data, method_len, METHOD_UNAUTHORIZE_FOR_PEER)) ||
-                   (is_method(method_data, method_len, METHOD_REDUCE_INIT_POS))) {
-            item = AMOUNT;
-        } else if (is_method(method_data, method_len, METHOD_WITHDRAW_FEE)) {
-            item = TOTAL_POS;
-        } else if (is_method(method_data, method_len, METHOD_WITHDRAW)) {
-            item = TOTAL_WITHDRAW;
-        } else {
-            item = POS;
-        }
-        script_hash_to_address(g_amount,
-                               sizeof(g_amount),
-                               G_context.tx_info.transaction.method.parameters[2].data);
-        ADD_PAIR(item, g_amount);
-        ADD_PAIR(ADDRESS, g_address);
-    }
-    /*
-    if (isCommonTx && G_context.tx_type != QUIT_NODE && G_context.tx_type != WITHDRAW_FEE) {
-        const char* item = NULL;
-        switch (G_context.tx_type) {
-            case CHANGE_MAX_AUTHORIZATION: item = MAX_AUTHORIZE; break;
-            case SET_FEE_PERCENTAGE: item = PEER_COST; break;
-            case WITHDRAW: item = (G_context.tx_info.pubkey_number == 1) ? AMOUNT :
-    TOTAL_WITHDRAW; break; case UN_AUTHORIZE_FOR_PEER: case REDUCE_INIT_POS: item = AMOUNT; break;
-            default: item = POS; break;
-        }
-        ADD_PAIR(item, G_context.tx_info.amount);
-    }
-    */
-    /*
-    if (G_context.tx_type == SET_FEE_PERCENTAGE) {
-        ADD_PAIR(STAKE_COST, G_context.tx_info.content_two);
-    }
-        */
-    if (is_method(method_data, method_len, METHOD_REGISTER_CANDIDATE)) {
-        ADD_PAIR(STAKE_FEE, STAKE_FEE_ONG);
-    }
-    /*
-    if (G_context.tx_type == REGISTER_CANDIDATE) {
-        ADD_PAIR(STAKE_FEE, STAKE_FEE_ONG);
-    }
-    */
-    // OEP4 and related transactions
-    /*
-    if (G_context.tx_type == OEP4_TRANSACTION ||
-        G_context.tx_type == NEO_VM_OEP4_APPROVE ||
-        G_context.tx_type == WASM_VM_OEP4_APPROVE ||
-        G_context.tx_type == NEO_VM_OEP4_TRANSFER_FROM ||
-        G_context.tx_type == WASM_VM_OEP4_TRANSFER_FROM) {
-        if (G_context.tx_info.decimals == 0) {
-            ADD_PAIR(DECIMALS, DECIMALS_UNKNOWN);
-        }
-    }
-    */
-    // Transfer and Approve transactions
-    bool is_transfer_or_approve =
-        is_method(method_data, method_len, METHOD_TRANSFER) ||
-        is_method(method_data, method_len, METHOD_TRANSFER_FROM) ||
-        is_method(method_data, method_len, METHOD_TRANSFER_V2) ||
-        is_method(method_data, method_len, METHOD_TRANSFER_FROM_V2) ||
-        is_method(method_data, method_len, METHOD_APPROVE) ||
-        is_method(method_data, method_len, METHOD_APPROVE_V2);  // OEP4 methods simplified to base methods
-    if (is_transfer_or_approve) {
-        get_token_value(G_context.tx_info.transaction.method.parameters[2].len,
-                        G_context.tx_info.transaction.method.parameters[2].data,
-                        G_context.tx_info.transaction.contract.token_decimals,
-                        g_amount,
-                        sizeof(g_amount));
-        bool is_ont = memcmp(G_context.tx_info.transaction.contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
-        bool is_ong = memcmp(G_context.tx_info.transaction.contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
-        if(is_ont) {
-            strlcat(g_amount, ONT_VIEW, sizeof(g_amount));
-        } else if(is_ong) {
-            strlcat(g_amount, ONG_VIEW, sizeof(g_amount));
-        }         
-        ADD_PAIR(AMOUNT, g_amount);
-
-        // List of methods corresponding to the second if block (transferFrom variants)
-        bool is_transfer_from = is_method(method_data, method_len, METHOD_TRANSFER_FROM) ||
-                                is_method(method_data, method_len, METHOD_TRANSFER_FROM_V2);
-
-        if (is_transfer_from) {
-            if (G_context.tx_info.transaction.contract.type == NATIVE_CONTRACT ||
-                G_context.tx_info.transaction.contract.type == WASMVM_CONTRACT) {
-                script_hash_to_address(g_address,
-                                       sizeof(g_address),
-                                       G_context.tx_info.transaction.method.parameters[0].data);
-
-            } else if (G_context.tx_info.transaction.contract.type == NEOVM_CONTRACT) {
-                script_hash_to_address(g_address,
-                                       sizeof(g_address),
-                                       G_context.tx_info.transaction.method.parameters[1].data);
-            }
-            ADD_PAIR(SENDER, g_address);
-        }
-        if (is_method(method_data, method_len, METHOD_TRANSFER) ||
-            is_method(method_data, method_len, METHOD_TRANSFER_V2)) {
-            if (G_context.tx_info.transaction.contract.type == NATIVE_CONTRACT ||
-                G_context.tx_info.transaction.contract.type == WASMVM_CONTRACT) {
-                script_hash_to_address(g_from,
-                                       sizeof(g_from),
-                                       G_context.tx_info.transaction.method.parameters[0].data);
-
-                script_hash_to_address(g_to,
-                                       sizeof(g_to),
-                                       G_context.tx_info.transaction.method.parameters[1].data);
-
-            } else if (G_context.tx_info.transaction.contract.type == NEOVM_CONTRACT) {
-                script_hash_to_address(g_from,
-                                       sizeof(g_from),
-                                       G_context.tx_info.transaction.method.parameters[1].data);
-
-                script_hash_to_address(g_to,
-                                       sizeof(g_to),
-                                       G_context.tx_info.transaction.method.parameters[2].data);
-            }
-        } else if (is_method(method_data, method_len, METHOD_TRANSFER_FROM)) {
-            if (G_context.tx_info.transaction.contract.type == NATIVE_CONTRACT ||
-                G_context.tx_info.transaction.contract.type == WASMVM_CONTRACT) {
-                script_hash_to_address(g_from,
-                                       sizeof(g_from),
-                                       G_context.tx_info.transaction.method.parameters[1].data);
-
-                script_hash_to_address(g_to,
-                                       sizeof(g_to),
-                                       G_context.tx_info.transaction.method.parameters[2].data);
-
-            } else if (G_context.tx_info.transaction.contract.type == NEOVM_CONTRACT) {
-                script_hash_to_address(g_from,
-                                       sizeof(g_from),
-                                       G_context.tx_info.transaction.method.parameters[2].data);
-
-                script_hash_to_address(g_to,
-                                       sizeof(g_to),
-                                       G_context.tx_info.transaction.method.parameters[3].data);
-            }
-        }
-        ADD_PAIR(FROM, g_from);
-        ADD_PAIR(TO, g_to);
-    }
-    // Fee
-    if (is_method(method_data, method_len, METHOD_REGISTER_CANDIDATE)) {
-        ADD_PAIR(GAS_FEE, G_context.display_data.gas_fee);
-    } else {
-        ADD_PAIR(FEE_ONG, G_context.display_data.gas_fee);
-    }
-    // Signer
-    ADD_PAIR(SIGNER, G_context.display_data.signer);
-    return nbPairs;
-}
-
-// Public function to start the transaction review
-// - Check if the app is in the right state for transaction review
-// - Format the amount and address strings in g_amount and g_address buffers
-// - Display the first screen of the transaction review
-// - Display a warning if the transaction is blind-signed
-int ui_display_transaction_bs_choice(bool is_blind_signed) {
+static int ui_display_transaction_bs_choice(bool is_blind_signed) {
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
         G_context.state = STATE_NONE;
         return io_send_sw(SW_BAD_STATE);
     }
+
+    clear_buffers();
+    explicit_bzero(&pairList, sizeof(pairList));
+    pairList.pairs = pairs;
+
     if (is_blind_signed) {
-        explicit_bzero(&pairList, sizeof(pairList));
-        pairs[0].item = BLIND_SIGN_TX;
-        pairs[0].value = BLIND_SIGNING;
-
-        pairs[1].item = SIGNER;
-        pairs[1].value = G_context.display_data.signer;
-
-        pairList.pairs = pairs;
+        pairs[0].item = BLIND_SIGN_TX; pairs[0].value = BLIND_SIGNING;
+        pairs[1].item = SIGNER; pairs[1].value = G_context.display_data.signer;
         pairList.nbPairs = 2;
-        review_title = BLIND_SIGNING_TITLE;
-        review_content = BLIND_SIGNING_CONTENT;
-        nbgl_useCaseReviewBlindSigning(TYPE_TRANSACTION,
-                                       &pairList,
-                                       &ICON_APP_BOILERPLATE,
-                                       BLIND_SIGNING_TITLE,
-                                       NULL,
-                                       BLIND_SIGNING_CONTENT,
-                                       NULL,
-                                       review_choice);
+        nbgl_useCaseReviewBlindSigning(TYPE_TRANSACTION, &pairList, &ICON_APP_BOILERPLATE, 
+                                       BLIND_SIGNING_TITLE, NULL, BLIND_SIGNING_CONTENT, NULL, review_choice);
     } else {
-        set_display_title_content();
-        explicit_bzero(&pairList, sizeof(pairList));
-        pairList.nbPairs = setTagValuePairs();
-        pairList.pairs = pairs;
-        nbgl_useCaseReview(TYPE_TRANSACTION,
-                           &pairList,
-                           &ICON_APP_BOILERPLATE,
-                           review_title,
-                           NULL,
-                           review_content,
-                           review_choice);
-    }
+        const method_display_t *method = get_method_display(&G_context.tx_info.transaction);
+        if (!method) {
+            return io_send_sw(SW_INVALID_TRANSACTION);
+        }
+        pairList.nbPairs = 0;
+        method->param_handler(&G_context.tx_info.transaction, pairs, &pairList.nbPairs);
+        
+        const char *fee_tag = (memcmp(method->method_name, METHOD_REGISTER_CANDIDATE, strlen(METHOD_REGISTER_CANDIDATE)) == 0) 
+                              ? GAS_FEE : FEE_ONG;
+        pairs[pairList.nbPairs].item = fee_tag; 
+        pairs[pairList.nbPairs].value = G_context.display_data.gas_fee;
+        pairList.nbPairs++;
+        
+        pairs[pairList.nbPairs].item = SIGNER; 
+        pairs[pairList.nbPairs].value = G_context.display_data.signer;
+        pairList.nbPairs++;
 
+        nbgl_useCaseReview(TYPE_TRANSACTION, &pairList, &ICON_APP_BOILERPLATE, 
+                           method->title, NULL, method->content, review_choice);
+    }
     return 0;
 }
 
-// Flow used to display a blind-signed transaction
-int ui_display_blind_signed_transaction(void) {
-    return ui_display_transaction_bs_choice(true);
-}
-
-// Flow used to display a clear-signed transaction
-int ui_display_transaction() {
+int ui_display_transaction(void) {
     return ui_display_transaction_bs_choice(false);
 }
 
+int ui_display_blind_signed_transaction(void) {
+    return ui_display_transaction_bs_choice(true);
+}
 #endif

@@ -1,3 +1,4 @@
+
 import pytest
 
 from ragger.bip import calculate_public_key_and_chaincode, CurveChoice

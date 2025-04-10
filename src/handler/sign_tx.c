@@ -77,6 +77,7 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
                             .offset = 0};
 
             parser_status_e status = transaction_deserialize(&buf, &G_context.tx_info.transaction);
+            PRINTF("xiexiestatus %d\n", status);
             return (status != PARSING_OK && !N_storage.blind_signed_allowed)
                        ? io_send_sw(SW_TX_PARSING_FAIL)
                        : handler_hash_tx_and_display_tx(status);

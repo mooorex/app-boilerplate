@@ -32,8 +32,7 @@ bool parse_method(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = size;
-    out->data = (uint8_t*)(buf->ptr + buf->offset);
-
+    out->data = (uint8_t *)(buf->ptr + buf->offset);
     return buffer_seek_cur(buf, size);
 }
 
@@ -50,9 +49,8 @@ bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *out) {
     }
 
     out->len = ADDRESS_LEN;
-    out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->data = (uint8_t *)(buf->ptr + buf->offset);
     out->type = PARAM_ADDR;
-
     return buffer_seek_cur(buf, ADDRESS_LEN);
 }
 
@@ -62,9 +60,7 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
 
     uint8_t amt = 0;
     bool stepping = true;
-    if (!buffer_read_u8(buf, &amt) || amt == 0) {
-        return false;
-    }
+    if (!buffer_read_u8(buf, &amt) || amt == 0) return false;
 
     if (amt > OPCODE_PUSH_NUMBER && amt <= OPCODE_PUSH_NUMBER + 16) {
         amt = 1;
@@ -74,9 +70,8 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = amt;
-    out->data = (uint8_t*)(buf->ptr + buf->offset - 1);
+    out->data = (uint8_t *)(buf->ptr + buf->offset - 1);
     out->type = PARAM_AMOUNT;
-
     return !stepping || buffer_seek_cur(buf, out->len);
 }
 
@@ -85,14 +80,11 @@ bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
     LEDGER_ASSERT(out != NULL, "NULL out");
 
     const uint8_t size = 16;
-    if (!buffer_can_read(buf, size)) {
-        return false;
-    }
+    if (!buffer_can_read(buf, size)) return false;
 
     out->len = size;
-    out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->data = (uint8_t *)(buf->ptr + buf->offset);
     out->type = PARAM_UINT128;
-
     return buffer_seek_cur(buf, size);
 }
 
@@ -106,9 +98,8 @@ bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = size;
-    out->data = (uint8_t*)(buf->ptr + buf->offset);
+    out->data = (uint8_t *)(buf->ptr + buf->offset);
     out->type = PARAM_PUBKEY;
-
     return buffer_seek_cur(buf, size);
 }
 
@@ -116,7 +107,7 @@ bool parse_ont_id(buffer_t *buf) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
 
     uint8_t size = 0;
-    return buffer_read_u8(buf, &size) && size != 0 && !buffer_seek_cur(buf, size);
+    return buffer_read_u8(buf, &size) && size != 0 && buffer_seek_cur(buf, size);
 }
 
 bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
@@ -124,8 +115,7 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
     LEDGER_ASSERT(pairs != NULL, "NULL pairs");
     LEDGER_ASSERT(cur != NULL, "NULL cur");
 
-    uint64_t pks_num = 0;
-    uint64_t amts_num = 0;
+    uint64_t pks_num = 0, amts_num = 0;
 
     if (!parse_amount(buf, &pairs[0]) || !convert_bytes_to_uint64_le(&pairs[0], &pks_num) ||
         pks_num == 0 || !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
@@ -193,41 +183,27 @@ bool parse_method_params(buffer_t *buf,
         (*params_num)++;
         switch (*params) {
             case PARAM_ADDR:
-                if (!parse_address(buf,
-                                   tx->contract.type != WASMVM_CONTRACT,
-                                   &(tx->method.parameters[cur++]))) {
+                if (!parse_address(buf, tx->contract.type != WASMVM_CONTRACT, &tx->method.parameters[cur++])) {
                     return false;
                 }
                 break;
             case PARAM_AMOUNT:
-                if (!parse_amount(buf, &(tx->method.parameters[cur++]))) {
-                    return false;
-                }
+                if (!parse_amount(buf, &tx->method.parameters[cur++])) return false;
                 break;
             case PARAM_UINT128:
-                if (!parse_uint128(buf, &(tx->method.parameters[cur++]))) {
-                    return false;
-                }
+                if (!parse_uint128(buf, &tx->method.parameters[cur++])) return false;
                 break;
             case PARAM_PUBKEY:
-                if (!parse_pk(buf, &(tx->method.parameters[cur++]))) {
-                    return false;
-                }
+                if (!parse_pk(buf, &tx->method.parameters[cur++])) return false;
                 break;
             case PARAM_PK_AMOUNT_PAIRS:
-                if (!parse_pk_amount_pairs(buf, &(tx->method.parameters[cur]), &cur)) {
-                    return false;
-                }
+                if (!parse_pk_amount_pairs(buf, &tx->method.parameters[cur], &cur)) return false;
                 break;
             case PARAM_TRANSFER_STATE:
-                if (!parse_trasfer_state(buf, &(tx->method.parameters[cur]), &cur)) {
-                    return false;
-                }
+                if (!parse_trasfer_state(buf, &tx->method.parameters[cur], &cur)) return false;
                 break;
             case PARAM_ONTID:
-                if (!parse_ont_id(buf)) {
-                    return false;
-                }
+                if (!parse_ont_id(buf)) return false;
                 break;
             default:
                 return false;
@@ -246,9 +222,7 @@ bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
     LEDGER_ASSERT(amount != NULL, "NULL amount");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
-    if (amount->len > sizeof(uint64_t) || amount->len == 0) {
-        return false;
-    }
+    if (amount->len > sizeof(uint64_t) || amount->len == 0) return false;
 
     *out = 0;
     uint8_t amt = amount->data[0];

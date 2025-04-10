@@ -68,3 +68,5 @@
  * Status word for wrong personal msg length.
  */
 #define SW_WRONG_PERSONAL_MSG_LENGTH 0xB00A
+
+#define SW_INVALID_TRANSACTION  0xB00B

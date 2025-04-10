@@ -1,3 +1,4 @@
+
 import pytest
 
 from ragger.backend.interface import BackendInterface
@@ -58,7 +59,7 @@ def test_sign_tx_short_tx(backend, scenario_navigator):
     logger.debug("pubkey:%s,der_sig:%s,transaction:%s,first_hash:%s",public_key.hex(),der_sig.hex(),transaction.hex(),first_hash.hex())
     assert check_signature_validity(public_key, der_sig, second_hash)
 
-""""
+
 # Transaction signature refused test
 # The test will ask for a transaction signature that will be refused on screen
 def test_sign_tx_refused(backend, scenario_navigator):
@@ -80,4 +81,3 @@ def test_sign_tx_refused(backend, scenario_navigator):
     # Assert that we have received a refusal
     assert e.value.status == Errors.SW_DENY
     assert len(e.value.data) == 0
-"""

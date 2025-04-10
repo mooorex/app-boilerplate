@@ -40,7 +40,6 @@ void app_main() {
     int input_len = 0;
     // Structured APDU command
     command_t cmd;
-
     io_init();
 
     ui_menu_main();
