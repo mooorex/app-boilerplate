@@ -83,7 +83,7 @@ void script_hash_to_address(char *out, size_t out_len, const unsigned char *scri
 void process_precision(const char *input, int precision, char *output, size_t output_len) {
     // Input validation
     if (!input || !output || output_len == 0 || precision < 0) {
-        if (output_len > 0) output[0] = '\0';
+        if (output != NULL && output_len > 0) output[0] = '\0';
         return;
     }
 

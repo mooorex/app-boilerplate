@@ -420,7 +420,7 @@ parser_status_e transaction_deserialize_method(buffer_t *buf, transaction_t *tx)
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
     size_t sBegin = buf->offset;
-    size_t sEnd = buf->size;
+    size_t sEnd = 0;
     switch (tx->contract.type) {
         case NATIVE_CONTRACT:
             sEnd = buf->size - NATIVE_CONTRACT_CONSTANT_LENGTH;

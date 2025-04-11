@@ -269,6 +269,7 @@ void parse_param_to_pair(transaction_t *tx,
 
 static const method_display_t *get_method_display(const transaction_t *tx) {
     static method_display_t method;
+    static param_config_t configs[MAX_CONFIGS]; // Now static
 
     if (tx == NULL) {
         PRINTF("Error: tx is NULL\n");
@@ -282,8 +283,6 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         PRINTF("Error: method_data is NULL or len=0\n");
         return NULL;
     }
-
-    param_config_t configs[MAX_CONFIGS];
 
     if (method_len == strlen(METHOD_TRANSFER) &&
         memcmp(method_data, METHOD_TRANSFER, method_len) == 0) {
