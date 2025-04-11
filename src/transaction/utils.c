@@ -90,7 +90,7 @@ void process_precision(const char *input, int precision, char *output, size_t ou
     size_t len = strlen(input);
     if (len == 0) {  // Handle empty string
         if (output_len > 1)
-            strcpy(output, "0");
+        strlcpy(output, "0",sizeof(output));
         else if (output_len > 0)
             output[0] = '\0';
         return;

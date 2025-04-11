@@ -5,6 +5,7 @@
 #include "buffer.h"
 
 #include "types.h"
+#include "tx_types.h"
 
 
 bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out);
