@@ -17,7 +17,7 @@
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "debug",
-        "selectedDevice": "Stax",
+        "selectedDevice": "Flex",
         "selectedVariant": "BOL",
         "testsList": [
             "test_sign_add_init_pos_tx_short_tx",

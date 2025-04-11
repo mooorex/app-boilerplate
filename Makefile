@@ -19,7 +19,7 @@ ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
 
-include $(BOLOS_SDK)/Makefile.defines
+#include $(BOLOS_SDK)/Makefile.defines
 
 ########################################
 #        Mandatory configuration       #
@@ -38,11 +38,10 @@ APP_SOURCE_PATH += src
 
 # Application icons following guidelines:
 # https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
-ICON_NANOS = icons/nanos_app_ont16px.gif
-ICON_NANOSP = icons/nanosp_app_ont14px.gif
-ICON_NANOX = icons/nanox_app_ont14px.gif
-ICON_STAX = icons/stax_app_ont32px.gif
-ICON_FLEX = icons/flex_app_ont40px.gif
+ICON_NANOSP = icons/app_ont14px.gif
+ICON_NANOX = icons/app_ont14px.gif
+ICON_STAX = icons/app_ont32px.gif
+ICON_FLEX = icons/app_ont32px.gif
 
 # Application allowed derivation curves.
 # Possibles curves are: secp256k1, secp256r1, ed25519 and bls12381g1
