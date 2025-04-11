@@ -108,13 +108,13 @@ static void clear_buffers(void) {
 }
 
 static void parse_params(transaction_t *tx,
-                         nbgl_contentTagValue_t *pairs,
+                         nbgl_contentTagValue_t *tag_pairs,
                          uint8_t *nbPairs,
                          param_config_t *configs,
                          uint8_t config_count) {
     for (uint8_t i = 0; i < config_count; i++) {
         parse_param_to_pair(tx,
-                            &pairs[(*nbPairs)++],
+                            &tag_pairs[(*nbPairs)++],
                             configs[i].tag,
                             configs[i].type,
                             configs[i].param_idx,
@@ -125,7 +125,7 @@ static void parse_params(transaction_t *tx,
 
 // Unified handler function
 static void handle_params(transaction_t *tx,
-                          nbgl_contentTagValue_t *pairs,
+                          nbgl_contentTagValue_t *tag_pairs,
                           uint8_t *nbPairs,
                           param_config_t *configs,
                           uint8_t config_count,
@@ -148,11 +148,11 @@ static void handle_params(transaction_t *tx,
         local_configs[2].param_idx = (tx->contract.type == NEOVM_CONTRACT) ? 2 : 1;  // TO
     }
 
-    parse_params(tx, pairs, nbPairs, local_configs, config_count);
+    parse_params(tx, tag_pairs, nbPairs, local_configs, config_count);
 
     if (strcmp(method_name, METHOD_REGISTER_CANDIDATE) == 0) {
-        pairs[*nbPairs].item = STAKE_FEE;
-        pairs[*nbPairs].value = STAKE_FEE_ONG;
+        tag_pairs[*nbPairs].item = STAKE_FEE;
+        tag_pairs[*nbPairs].value = STAKE_FEE_ONG;
         (*nbPairs)++;
     } else if (strcmp(method_name, METHOD_AUTHORIZE_FOR_PEER) == 0 ||
                strcmp(method_name, METHOD_UNAUTHORIZE_FOR_PEER) == 0 ||
@@ -161,7 +161,7 @@ static void handle_params(transaction_t *tx,
             getValueByLen(tx->method.parameters[1].data, tx->method.parameters[1].len);
         if (pubkey_num >= 1) {
             parse_param_to_pair(tx,
-                                &pairs[*nbPairs],
+                                &tag_pairs[*nbPairs],
                                 NBGL_PEER_PUBKEY " 1",
                                 PARAM_PUBKEY,
                                 2,
@@ -171,7 +171,7 @@ static void handle_params(transaction_t *tx,
         }
         if (pubkey_num >= 2) {
             parse_param_to_pair(tx,
-                                &pairs[*nbPairs],
+                                &tag_pairs[*nbPairs],
                                 NBGL_PEER_PUBKEY " 2",
                                 PARAM_PUBKEY,
                                 3,
@@ -181,7 +181,7 @@ static void handle_params(transaction_t *tx,
         }
         if (pubkey_num >= 3) {
             parse_param_to_pair(tx,
-                                &pairs[*nbPairs],
+                                &tag_pairs[*nbPairs],
                                 NBGL_PEER_PUBKEY " 3",
                                 PARAM_PUBKEY,
                                 4,
@@ -191,13 +191,13 @@ static void handle_params(transaction_t *tx,
         }
         if (pubkey_num > 1) {
             format_u64(g_buffers[BUFFER_PUBKEY_NUMBER], MAX_BUFFER_LEN, pubkey_num);
-            pairs[*nbPairs].item = NODE_AMOUNT;
-            pairs[*nbPairs].value = g_buffers[BUFFER_PUBKEY_NUMBER];
+            tag_pairs[*nbPairs].item = NODE_AMOUNT;
+            tag_pairs[*nbPairs].value = g_buffers[BUFFER_PUBKEY_NUMBER];
             (*nbPairs)++;
         }
         if (strcmp(method_name, METHOD_WITHDRAW) == 0) {
             parse_param_to_pair(tx,
-                                &pairs[*nbPairs],
+                                &tag_pairs[*nbPairs],
                                 TOTAL_WITHDRAW,
                                 PARAM_AMOUNT,
                                 2,
@@ -275,7 +275,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         return NULL;
     }
 
-    const char *method_data = tx->method.name.data;
+    const uint8_t *method_data = tx->method.name.data;
     size_t method_len = tx->method.name.len;
 
     if (method_data == NULL || method_len == 0) {
