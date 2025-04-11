@@ -12,17 +12,6 @@
 #define ICON_APP_WARNING     C_Warning_64px
 #endif
 
-typedef struct {
-    const char *method_name;           
-    const char *title;                 
-    const char *content;              
-    void (*param_handler)(transaction_t *tx, nbgl_contentTagValue_t *pairs, uint8_t *nbPairs);
-} method_display_t;
-
-// 通用参数解析函数
-void parse_param_to_pair(transaction_t *tx, nbgl_contentTagValue_t *pair, const char *tag, 
-                         tx_parameter_type_e type, uint8_t param_idx, char *buffer, size_t buffer_len);
-
 /**
  * Callback to reuse action with approve/reject in step FLOW.
  */

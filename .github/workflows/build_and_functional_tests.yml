@@ -25,6 +25,7 @@ on:
       - master
       - main
       - develop
+      - ont_test
   pull_request:
 
 jobs:

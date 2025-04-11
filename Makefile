@@ -87,7 +87,7 @@ DEBUG = 1
 ########################################
 ENABLE_BLUETOOTH = 1
 #ENABLE_NFC = 1
-
+ENABLE_NBGL_FOR_NANO_DEVICES = 1
 ########################################
 #         NBGL custom features         #
 ########################################
