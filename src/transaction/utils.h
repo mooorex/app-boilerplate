@@ -82,4 +82,4 @@ bool get_token_amount(const uint8_t value_len,const uint64_t value[2],const uint
 
 bool get_token_value(uint8_t value_len,uint8_t *data,const uint8_t decimals,char* amount,size_t amount_len);
 
-void get_ong_fee(uint64_t gas_price,uint64_t gas_limit,char* out, size_t out_len);
+bool get_ong_fee(uint64_t gas_price,uint64_t gas_limit);

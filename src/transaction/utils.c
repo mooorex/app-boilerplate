@@ -90,7 +90,7 @@ void process_precision(const char *input, int precision, char *output, size_t ou
     size_t len = strlen(input);
     if (len == 0) {  // Handle empty string
         if (output_len > 1)
-        strlcpy(output, "0",sizeof(output));
+            strlcpy(output, "0", sizeof(output));
         else if (output_len > 0)
             output[0] = '\0';
         return;
@@ -292,7 +292,15 @@ bool get_token_value(uint8_t value_len,
     }
 }
 
-void get_ong_fee(uint64_t gas_price, uint64_t gas_limit, char *out, size_t out_len) {
-    format_fpu64_trimmed(out, out_len, gas_price * gas_limit, 9);
-    strlcat(out, ONG_VIEW, out_len);
+bool get_ong_fee(uint64_t gas_price, uint64_t gas_limit) {
+    if (gas_price == 0 || gas_limit == 0 || gas_price > UINT64_MAX / gas_limit ||
+        !format_fpu64_trimmed(G_context.display_data.gas_fee,
+                              sizeof(G_context.display_data.gas_fee),
+                              gas_price * gas_limit,
+                              9)) {
+        return false;
+    }
+    strlcat(G_context.display_data.gas_fee, ONG_VIEW, sizeof(G_context.display_data.gas_fee));
+    
+    return true;
 }

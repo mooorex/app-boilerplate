@@ -82,24 +82,19 @@ Other cases are considered invalid bytecode.
 In WASM contracts, the amount is 16 bytes, which is parsed as a uint128_t in little-endian order.
 Similarly, there is no prefix indicating the length.
 
-
-
-
 */
 
-#include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "buffer.h"
+#include "macros.h"
+
 #include "deserialize.h"
 #include "utils.h"
 #include "types.h"
-#include "macros.h"
 #include "parse.h"
 #include "contract.h"
-#include "tx_types.h"
-#include "../globals.h"
 
 #if defined(TEST) || defined(FUZZ)
 #include "assert.h"
@@ -108,240 +103,49 @@ Similarly, there is no prefix indicating the length.
 #include "ledger_assert.h"
 #endif
 
-// 为 payload 分配独立的 contract_addr 和 methods 存储
-
-void get_native_token_methods(tx_method_signature_t *methods, size_t *count) {
-    static const tx_parameter_type_e transfer_params[] = {PARAM_TRANSFER_STATE_LIST, PARAM_END};
-    static const tx_parameter_type_e transfer_from_params[] = {PARAM_ADDR,
-                                                               PARAM_TRANSFER_STATE,
-                                                               PARAM_END};
-    static const tx_parameter_type_e approve_params[] = {PARAM_ADDR,
-                                                         PARAM_ADDR,
-                                                         PARAM_AMOUNT,
-                                                         PARAM_END};
-
-    methods[0].name = METHOD_TRANSFER;
-    methods[0].parameters = transfer_params;
-    methods[1].name = METHOD_TRANSFER_FROM;
-    methods[1].parameters = transfer_from_params;
-    methods[2].name = METHOD_APPROVE;
-    methods[2].parameters = approve_params;
-    methods[3].name = METHOD_TRANSFER_V2;
-    methods[3].parameters = transfer_params;
-    methods[4].name = METHOD_TRANSFER_FROM_V2;
-    methods[4].parameters = transfer_from_params;
-    methods[5].name = METHOD_APPROVE_V2;
-    methods[5].parameters = approve_params;
-    methods[6].name = NULL;
-    *count = 7;
-}
-
-void get_neovm_oep4_token_methods(tx_method_signature_t *methods, size_t *count) {
-    static const tx_parameter_type_e transfer_params[] = {PARAM_AMOUNT,
-                                                          PARAM_ADDR,
-                                                          PARAM_ADDR,
-                                                          PARAM_END};
-    static const tx_parameter_type_e transfer_from_params[] = {PARAM_AMOUNT,
-                                                               PARAM_ADDR,
-                                                               PARAM_ADDR,
-                                                               PARAM_ADDR,
-                                                               PARAM_END};
-    static const tx_parameter_type_e approve_params[] = {PARAM_AMOUNT,
-                                                         PARAM_ADDR,
-                                                         PARAM_ADDR,
-                                                         PARAM_END};
-
-    methods[0].name = METHOD_TRANSFER;
-    methods[0].parameters = transfer_params;
-    methods[1].name = METHOD_TRANSFER_FROM;
-    methods[1].parameters = transfer_from_params;
-    methods[2].name = METHOD_APPROVE;
-    methods[2].parameters = approve_params;
-    methods[3].name = NULL;
-    *count = 4;
-}
-
-void get_wasmvm_oep4_token_methods(tx_method_signature_t *methods, size_t *count) {
-    static const tx_parameter_type_e transfer_params[] = {PARAM_ADDR,
-                                                          PARAM_ADDR,
-                                                          PARAM_UINT128,
-                                                          PARAM_END};
-    static const tx_parameter_type_e transfer_from_params[] = {PARAM_ADDR,
-                                                               PARAM_ADDR,
-                                                               PARAM_ADDR,
-                                                               PARAM_UINT128,
-                                                               PARAM_END};
-    static const tx_parameter_type_e approve_params[] = {PARAM_ADDR,
-                                                         PARAM_ADDR,
-                                                         PARAM_UINT128,
-                                                         PARAM_END};
-
-    methods[0].name = METHOD_TRANSFER;
-    methods[0].parameters = transfer_params;
-    methods[1].name = METHOD_TRANSFER_FROM;
-    methods[1].parameters = transfer_from_params;
-    methods[2].name = METHOD_APPROVE;
-    methods[2].parameters = approve_params;
-    methods[3].name = NULL;
-    *count = 4;
-}
-
-void get_native_governance_methods(tx_method_signature_t *methods, size_t *count) {
-    static const tx_parameter_type_e register_params[] =
-        {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_ONTID, PARAM_AMOUNT, PARAM_END};
-    static const tx_parameter_type_e quit_params[] = {PARAM_PUBKEY, PARAM_ADDR, PARAM_END};
-    static const tx_parameter_type_e add_init_params[] = {PARAM_PUBKEY,
-                                                          PARAM_ADDR,
-                                                          PARAM_AMOUNT,
-                                                          PARAM_END};
-    static const tx_parameter_type_e reduce_init_params[] = {PARAM_PUBKEY,
-                                                             PARAM_ADDR,
-                                                             PARAM_AMOUNT,
-                                                             PARAM_END};
-    static const tx_parameter_type_e change_max_params[] = {PARAM_PUBKEY,
-                                                            PARAM_ADDR,
-                                                            PARAM_AMOUNT,
-                                                            PARAM_END};
-    static const tx_parameter_type_e set_fee_params[] = {PARAM_PUBKEY,
-                                                         PARAM_ADDR,
-                                                         PARAM_AMOUNT,
-                                                         PARAM_AMOUNT,
-                                                         PARAM_END};
-    static const tx_parameter_type_e auth_params[] = {PARAM_ADDR, PARAM_PK_AMOUNT_PAIRS, PARAM_END};
-    static const tx_parameter_type_e withdraw_params[] = {PARAM_ADDR,
-                                                          PARAM_PK_AMOUNT_PAIRS,
-                                                          PARAM_END};
-    static const tx_parameter_type_e withdraw_fee_params[] = {PARAM_ADDR, PARAM_END};
-
-    methods[0].name = METHOD_REGISTER_CANDIDATE;
-    methods[0].parameters = register_params;
-    methods[1].name = METHOD_QUIT_NODE;
-    methods[1].parameters = quit_params;
-    methods[2].name = METHOD_ADD_INIT_POS;
-    methods[2].parameters = add_init_params;
-    methods[3].name = METHOD_REDUCE_INIT_POS;
-    methods[3].parameters = reduce_init_params;
-    methods[4].name = METHOD_CHANGE_MAX_AUTH;
-    methods[4].parameters = change_max_params;
-    methods[5].name = METHOD_SET_FEE_PERCENTAGE;
-    methods[5].parameters = set_fee_params;
-    methods[6].name = METHOD_AUTHORIZE_FOR_PEER;
-    methods[6].parameters = auth_params;
-    methods[7].name = METHOD_UNAUTHORIZE_FOR_PEER;
-    methods[7].parameters = auth_params;
-    methods[8].name = METHOD_WITHDRAW;
-    methods[8].parameters = withdraw_params;
-    methods[9].name = METHOD_WITHDRAW_FEE;
-    methods[9].parameters = withdraw_fee_params;
-    methods[10].name = NULL;
-    *count = 11;
-}
-
-void get_tx_payload(payload_t *payload, size_t *count, payload_storage_t *storage) {
-    size_t method_count;
-
-    get_ont_addr(storage[0].contract_addr);
-    payload[0].contract_addr = storage[0].contract_addr;
-    payload[0].token_decimals = 0;
-    payload[0].methods = storage[0].methods;
-    get_native_token_methods((tx_method_signature_t *) payload[0].methods, &method_count);
-
-    get_ong_addr(storage[1].contract_addr);
-    payload[1].contract_addr = storage[1].contract_addr;
-    payload[1].token_decimals = 9;
-    payload[1].methods = storage[1].methods;
-    get_native_token_methods((tx_method_signature_t *) payload[1].methods, &method_count);
-
-    get_gov_addr(storage[2].contract_addr);
-    payload[2].contract_addr = storage[2].contract_addr;
-    payload[2].token_decimals = 0;
-    payload[2].methods = storage[2].methods;
-    get_native_governance_methods((tx_method_signature_t *) payload[2].methods, &method_count);
-
-    get_wing_addr(storage[3].contract_addr);
-    payload[3].contract_addr = storage[3].contract_addr;
-    payload[3].token_decimals = 0;
-    payload[3].methods = storage[3].methods;
-    get_neovm_oep4_token_methods((tx_method_signature_t *) payload[3].methods, &method_count);
-
-    get_wtk_addr(storage[4].contract_addr);
-    payload[4].contract_addr = storage[4].contract_addr;
-    payload[4].token_decimals = 0;
-    payload[4].methods = storage[4].methods;
-    get_wasmvm_oep4_token_methods((tx_method_signature_t *) payload[4].methods, &method_count);
-
-    get_myt_addr(storage[5].contract_addr);
-    payload[5].contract_addr = storage[5].contract_addr;
-    payload[5].token_decimals = 18;
-    payload[5].methods = storage[5].methods;
-    get_neovm_oep4_token_methods((tx_method_signature_t *) payload[5].methods, &method_count);
-    *count = 6;
-}
-
-parser_status_e transaction_deserialize(buffer_t *buf, transaction_t *tx) {
+static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
-    parser_status_e status = transaction_deserialize_header(buf, tx);
-    if (status != PARSING_OK) return status;
-
-    status = transaction_deserialize_payload_size(buf, tx);
-    if (status != PARSING_OK) return status;
-
-    status = transaction_deserialize_contract(buf, tx);
-    if (status != PARSING_OK) return status;
-
-    status = transaction_deserialize_method(buf, tx);
-    if (status != PARSING_OK) return status;
-    status = transaction_deserialize_params(buf, tx);
-    if (status != PARSING_OK) {
-        return status;
+    if (buf->size > MAX_TRANSACTION_LEN) {
+        return WRONG_LENGTH_ERROR;
+    }
+    // version
+    if (!buffer_read_u8(buf, &tx->header.version) || tx->header.version != 0x00) {
+        return BYTECODE_PARSING_ERROR;
     }
 
-    size_t len = 0;
-    switch (tx->contract.type) {
-        case NATIVE_CONTRACT:
-            len = tx->method.name.len + 1 + NATIVE_CONTRACT_CONSTANT_LENGTH;
-            break;
-        case NEOVM_CONTRACT:
-            len = tx->method.name.len + 1 + NEOVM_CONTRACT_CONSTANT_LENGTH;
-            break;
-        case WASMVM_CONTRACT:
-            len = 0;
-            break;
-        default:
-            return BYTECODE_PARSING_ERROR;
+    // tx_type
+    if (!buffer_read_u8(buf, &tx->header.tx_type)) {
+        return BYTECODE_PARSING_ERROR;
     }
 
-    return (buf->offset + len == buf->size) ? PARSING_OK : WRONG_LENGTH_ERROR;
-}
-
-parser_status_e transaction_deserialize_header(buffer_t *buf, transaction_t *tx) {
-    LEDGER_ASSERT(buf != NULL, "NULL buf");
-    LEDGER_ASSERT(tx != NULL, "NULL tx");
-
-    if (buf->size > MAX_TRANSACTION_LEN) return WRONG_LENGTH_ERROR;
-
-    if (!buffer_read_u8(buf, &tx->header.version) || tx->header.version != 0x00)
+    // nonce
+    if (!buffer_read_u32(buf, &tx->header.nonce, LE)) {
         return BYTECODE_PARSING_ERROR;
-    if (!buffer_read_u8(buf, &tx->header.tx_type)) return BYTECODE_PARSING_ERROR;
-    if (!buffer_read_u32(buf, &tx->header.nonce, LE)) return BYTECODE_PARSING_ERROR;
-    if (!buffer_read_u64(buf, &tx->header.gas_price, LE) || tx->header.gas_price < GAS_PRICE_MIN)
-        return BYTECODE_PARSING_ERROR;
-    if (!buffer_read_u64(buf, &tx->header.gas_limit, LE) || tx->header.gas_limit < GAS_LIMIT_MIN)
-        return BYTECODE_PARSING_ERROR;
+    }
 
-    get_ong_fee(tx->header.gas_price,
-                tx->header.gas_limit,
-                G_context.display_data.gas_fee,
-                sizeof(G_context.display_data.gas_fee));
+    // gasPrice
+    if (!buffer_read_u64(buf, &tx->header.gas_price, LE) || tx->header.gas_price < GAS_PRICE_MIN) {
+        return BYTECODE_PARSING_ERROR;
+    }
+
+    // gasLimit
+    if (!buffer_read_u64(buf, &tx->header.gas_limit, LE) || tx->header.gas_limit < GAS_LIMIT_MIN ||
+        !get_ong_fee(tx->header.gas_price, tx->header.gas_limit)) {
+        return BYTECODE_PARSING_ERROR;
+    }
+
+    // payer
     tx->header.payer = (uint8_t *) (buf->ptr + buf->offset);
-    if (!buffer_seek_cur(buf, ADDRESS_LEN)) return BYTECODE_PARSING_ERROR;
+    if (!buffer_seek_cur(buf, ADDRESS_LEN)) {
+        return BYTECODE_PARSING_ERROR;
+    }
 
     return PARSING_OK;
 }
 
-parser_status_e transaction_deserialize_payload_size(buffer_t *buf, transaction_t *tx) {
+static parser_status_e transaction_deserialize_payload_size(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
     uint8_t first_byte;
@@ -371,13 +175,11 @@ parser_status_e transaction_deserialize_payload_size(buffer_t *buf, transaction_
             break;
     }
 
-    if (buf->offset + payload_size + ARRAY_LENGTH(OPCODE_END) != buf->size)
-        return WRONG_LENGTH_ERROR;
-
-    return PARSING_OK;
+    return (buf->offset + payload_size + ARRAY_LENGTH(OPCODE_END) != buf->size) ? WRONG_LENGTH_ERROR
+                                                                                : PARSING_OK;
 }
 
-parser_status_e transaction_deserialize_contract(buffer_t *buf, transaction_t *tx) {
+static parser_status_e transaction_deserialize_contract(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
     size_t os = buf->offset;
@@ -388,18 +190,18 @@ parser_status_e transaction_deserialize_contract(buffer_t *buf, transaction_t *t
                 tx->contract.type = NATIVE_CONTRACT;
                 if ((!buffer_seek_set(buf, buf->size - NATIVE_CONTRACT_CONSTANT_LENGTH) ||
                      !parse_address(buf, true, &(tx->contract.addr)) ||
-                     !parse_constant(buf, OPCODE_SYSCALL, ARRAY_LENGTH(OPCODE_SYSCALL)) ||
-                     !parse_constant(buf, NATIVE_INVOKE, ARRAY_LENGTH(NATIVE_INVOKE)) ||
-                     !parse_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END))) ||
+                     !parse_check_constant(buf, OPCODE_SYSCALL, ARRAY_LENGTH(OPCODE_SYSCALL)) ||
+                     !parse_check_constant(buf, NATIVE_INVOKE, ARRAY_LENGTH(NATIVE_INVOKE)) ||
+                     !parse_check_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END))) ||
                     buf->offset != buf->size || !buffer_seek_set(buf, os)) {
                     return BYTECODE_PARSING_ERROR;
                 }
             } else {
                 tx->contract.type = NEOVM_CONTRACT;
                 if (!buffer_seek_set(buf, buf->size - NEOVM_CONTRACT_CONSTANT_LENGTH) ||
-                    !parse_constant(buf, OPCODE_APPCALL, ARRAY_LENGTH(OPCODE_APPCALL)) ||
+                    !parse_check_constant(buf, OPCODE_APPCALL, ARRAY_LENGTH(OPCODE_APPCALL)) ||
                     !parse_address(buf, false, &(tx->contract.addr)) ||
-                    !parse_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END)) ||
+                    !parse_check_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END)) ||
                     buf->offset != buf->size || !buffer_seek_set(buf, os)) {
                     return BYTECODE_PARSING_ERROR;
                 }
@@ -415,7 +217,7 @@ parser_status_e transaction_deserialize_contract(buffer_t *buf, transaction_t *t
     return PARSING_OK;
 }
 
-parser_status_e transaction_deserialize_method(buffer_t *buf, transaction_t *tx) {
+static parser_status_e transaction_deserialize_method(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
@@ -465,7 +267,7 @@ parser_status_e transaction_deserialize_method(buffer_t *buf, transaction_t *tx)
     return PARSING_OK;
 }
 
-parser_status_e native_transfer_deserialize_params(buffer_t *buf, transaction_t *tx) {
+static parser_status_e native_transfer_deserialize_params(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
@@ -478,17 +280,13 @@ parser_status_e native_transfer_deserialize_params(buffer_t *buf, transaction_t 
         num++;
     }
 
-    tx_parameter_t tmp_num;
-    uint64_t out;
-    if (!parse_amount(buf, &tmp_num) || !convert_bytes_to_uint64_le(&tmp_num, &out) || out != num ||
-        !parse_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK))) {
-        return BYTECODE_PARSING_ERROR;
-    }
-
-    return PARSING_OK;
+    return parse_check_amount(buf, num) &&
+                   parse_check_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK))
+               ? PARSING_OK
+               : BYTECODE_PARSING_ERROR;
 }
 
-parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx) {
+static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
@@ -530,47 +328,25 @@ parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx)
             }
         }
 
-        if (!parse_constant(buf, OPCODE_ST_BEGIN, ARRAY_LENGTH(OPCODE_ST_BEGIN))) {
-            PRINTF("Error: parse_constant OPCODE_ST_BEGIN failed\n");
+        if (!parse_check_constant(buf, OPCODE_ST_BEGIN, ARRAY_LENGTH(OPCODE_ST_BEGIN))) {
+            PRINTF("Error: parse_check_constant OPCODE_ST_BEGIN failed\n");
             return BYTECODE_PARSING_ERROR;
         }
     }
 
     payload_t payload[6];
-    payload_storage_t payload_storage[6];  // 分配独立的存储空间
+    payload_storage_t payload_storage[6];  
     size_t payload_len;
     get_tx_payload(payload, &payload_len, payload_storage);
-    
 
     size_t params_num = 0;
     for (size_t i = 0; i < payload_len; i++) {
-        uint8_t addr[ADDRESS_LEN];
-        switch (i) {
-            case 0:
-                get_ont_addr(addr);
-                break;
-            case 1:
-                get_ong_addr(addr);
-                break;
-            case 2:
-                get_gov_addr(addr);
-                break;
-            case 3:
-                get_wing_addr(addr);
-                break;
-            case 4:
-                get_wtk_addr(addr);
-                break;
-            case 5:
-                get_myt_addr(addr);
-                break;
-        }
-        if (memcmp(tx->contract.addr.data, addr, ADDRESS_LEN) == 0) {
+        if (memcmp(tx->contract.addr.data, payload[i].contract_addr, ADDRESS_LEN) == 0) {
             if (tx->contract.type != NATIVE_CONTRACT) {
                 tx->contract.token_decimals = payload[i].token_decimals;
             }
-            for (const tx_method_signature_t *methods = payload[i].methods; methods->name != NULL;
-                 ++methods) {
+            const tx_method_signature_t *methods = payload[i].methods;
+            while (methods->name != NULL) {
                 if (tx->method.name.len == strlen(methods->name) &&
                     memcmp(methods->name, tx->method.name.data, tx->method.name.len) == 0) {
                     if (!parse_method_params(buf, tx, methods->parameters, &params_num)) {
@@ -579,32 +355,82 @@ parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx)
                     }
                     break;
                 }
+                ++methods;
+            }
+            if (tx->contract.type != NATIVE_CONTRACT && methods->name == NULL) {
+                return PARSING_TX_NOT_DEFINED;
             }
             break;
+        }
+        if (i == payload_len - 1) {
+            return PARSING_TX_NOT_DEFINED;
         }
     }
 
     if (tx->contract.type == NATIVE_CONTRACT &&
-        !parse_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
-        PRINTF("Error: parse_constant OPCODE_ST_END failed\n");
+        !parse_check_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
+        PRINTF("Error: parse_check_constant OPCODE_ST_END failed\n");
         return BYTECODE_PARSING_ERROR;
     }
 
-    tx_parameter_t params_num_t;
-    uint64_t params_num_out;
     if (tx->contract.type == NEOVM_CONTRACT &&
-        (!parse_amount(buf, &params_num_t) ||
-         !convert_bytes_to_uint64_le(&params_num_t, &params_num_out) ||
-         params_num != params_num_out ||
-         !parse_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK)))) {
+        (!parse_check_amount(buf, params_num) ||
+         !parse_check_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK)))) {
         PRINTF("Error: NEOVM parsing failed\n");
         return BYTECODE_PARSING_ERROR;
     }
     if (tx->contract.type == WASMVM_CONTRACT &&
-        !parse_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END))) {
+        !parse_check_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END))) {
         PRINTF("Error: WASMVM parsing failed\n");
         return BYTECODE_PARSING_ERROR;
     }
 
     return PARSING_OK;
+}
+
+parser_status_e transaction_deserialize(buffer_t *buf, transaction_t *tx) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(tx != NULL, "NULL tx");
+
+    parser_status_e status = transaction_deserialize_header(buf, tx);
+    if (status != PARSING_OK) {
+        return status;
+    }
+
+    status = transaction_deserialize_payload_size(buf, tx);
+    if (status != PARSING_OK) {
+        return status;
+    }
+
+    status = transaction_deserialize_contract(buf, tx);
+    if (status != PARSING_OK) {
+        return status;
+    }
+
+    status = transaction_deserialize_method(buf, tx);
+    if (status != PARSING_OK) {
+        return status;
+    }
+
+    status = transaction_deserialize_params(buf, tx);
+    if (status != PARSING_OK) {
+        return status;
+    }
+
+    size_t len = 0;
+    switch (tx->contract.type) {
+        case NATIVE_CONTRACT:
+            len = tx->method.name.len + 1 + NATIVE_CONTRACT_CONSTANT_LENGTH;
+            break;
+        case NEOVM_CONTRACT:
+            len = tx->method.name.len + 1 + NEOVM_CONTRACT_CONSTANT_LENGTH;
+            break;
+        case WASMVM_CONTRACT:
+            len = 0;
+            break;
+        default:
+            return BYTECODE_PARSING_ERROR;
+    }
+
+    return (buf->offset + len == buf->size) ? PARSING_OK : WRONG_LENGTH_ERROR;
 }

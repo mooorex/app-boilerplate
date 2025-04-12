@@ -77,7 +77,8 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
                             .offset = 0};
 
             parser_status_e status = transaction_deserialize(&buf, &G_context.tx_info.transaction);
-            return (status != PARSING_OK && !N_storage.blind_signed_allowed)
+            return (status != PARSING_OK &&
+                    (status != PARSING_TX_NOT_DEFINED || !N_storage.blind_signed_allowed))
                        ? io_send_sw(SW_TX_PARSING_FAIL)
                        : handler_hash_tx_and_display_tx(status);
         }
@@ -86,7 +87,8 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
 }
 
 int handler_hash_tx_and_display_tx(int status) {
-    if (status != PARSING_OK && !N_storage.blind_signed_allowed) {
+    if (status != PARSING_OK &&
+        (status != PARSING_TX_NOT_DEFINED || !N_storage.blind_signed_allowed)) {
         return io_send_sw(SW_TX_PARSING_FAIL);
     }
     uint8_t second_hash[32];
@@ -104,7 +106,6 @@ int handler_hash_tx_and_display_tx(int status) {
     memcpy(G_context.tx_info.m_hash, second_hash, 32);
     explicit_bzero(&second_hash, sizeof(second_hash));
     G_context.state = STATE_PARSED;
-    return (status != PARSING_OK && N_storage.blind_signed_allowed)
-               ? ui_display_blind_signed_transaction()
-               : ui_display_transaction();
+    bool bs = (status == PARSING_TX_NOT_DEFINED && N_storage.blind_signed_allowed);
+    return ui_display_transaction(bs);
 }
