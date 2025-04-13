@@ -328,10 +328,8 @@ static void handle_params(transaction_t *tx,
             add_step(step_index, &ux_display_node_amount_step);
         }
         if ( strncmp((const char *)tx->method.name.data, METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) {
-            uint8_t amount_num = get_data_value(tx->method.parameters[2 + pubkey_num].data,
-                                                tx->method.parameters[2 + pubkey_num].len);
             u_int64_t amount = 0;
-            for (size_t i = 1; i <= amount_num; i++) {
+            for (size_t i = 0; i < pubkey_num; i++) {
                 amount += get_data_value(tx->method.parameters[2 + pubkey_num + i].data,
                                          tx->method.parameters[2 + pubkey_num + i].len);
             }
