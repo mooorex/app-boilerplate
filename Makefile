@@ -19,9 +19,16 @@ ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
 
-#ifeq ($(TARGET_NAME),TARGET_NANOS)
-	include $(BOLOS_SDK)/Makefile.defines
-#endif
+include $(BOLOS_SDK)/Makefile.target
+
+#$(info Building for TARGET_NAME: $(TARGET_NAME))
+
+ifeq ($(TARGET_NAME),TARGET_NANOS)
+    include $(BOLOS_SDK)/Makefile.defines
+endif
+ifeq ($(filter $(TARGET_NAME),TARGET_NANOX TARGET_NANOS2),$(TARGET_NAME))
+    ENABLE_NBGL_FOR_NANO_DEVICES = 1
+endif
 
 ########################################
 #        Mandatory configuration       #

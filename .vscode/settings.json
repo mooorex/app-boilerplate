@@ -22,7 +22,7 @@
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "debug",
-        "selectedDevice": "Nano S",
+        "selectedDevice": "Nano X",
         "selectedVariant": "BOL",
         "testsList": [
             "test_sign_add_init_pos_tx_short_tx",
