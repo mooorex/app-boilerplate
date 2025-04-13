@@ -2,10 +2,12 @@
 
 #include <stdbool.h>  // bool
 #include "../transaction/tx_types.h"
-#include "nbgl_use_case.h"
 
 #if defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 #define ICON_APP_BOILERPLATE C_app_ont14px
+#define ICON_APP_WARNING     C_icon_warning
+#elif defined(TARGET_NANOS)
+#define ICON_APP_BOILERPLATE C_app_ont16px
 #define ICON_APP_WARNING     C_icon_warning
 #elif defined(TARGET_STAX)
 #define ICON_APP_BOILERPLATE C_app_ont32px

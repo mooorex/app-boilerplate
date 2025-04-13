@@ -19,8 +19,8 @@
 #define VALUE_SIZE 8
 #define OPCODE_VALUE  81
 #define OPCODE_OPERATION_CODE  13139050 //6a7cc8
-#define UINT64_T_BYTE_LEN 8
-#define TWO_UINT64_T_BYTE_LEN 16
+#define UINT64_BYTE_LEN 8
+#define UINT128_BYTE_LEN 16
 
 /** the length of a SHA256 hash */
 #define SHA256_HASH_LEN 32
@@ -78,8 +78,9 @@ bool ont_address_by_pubkey(const uint8_t public_key[static 65],char* out, size_t
 
 void uint128_to_decimal_string(uint64_t high, uint64_t low, char* result, size_t buffer_size);
 
-bool get_token_amount(const uint8_t value_len,const uint64_t value[2],const uint8_t decimals,char* amount,size_t amount_len);
 
-bool get_token_value(uint8_t value_len,uint8_t *data,const uint8_t decimals,char* amount,size_t amount_len);
+bool get_token_value(uint8_t value_len,uint8_t *data,const uint8_t decimals,const tx_contract_type_e type,char* amount,size_t amount_len);
 
 void get_ong_fee(uint64_t gas_price,uint64_t gas_limit,char* out, size_t out_len);
+
+uint64_t get_data_value(uint8_t *data,uint8_t len);

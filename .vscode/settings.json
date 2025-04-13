@@ -13,11 +13,16 @@
         "string": "c",
         "string_view": "c",
         "bitset": "c",
-        "initializer_list": "c"
+        "initializer_list": "c",
+        "__bit_reference": "c",
+        "__memory": "c",
+        "limits": "c",
+        "ratio": "c",
+        "tuple": "c"
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "debug",
-        "selectedDevice": "Flex",
+        "selectedDevice": "Nano S",
         "selectedVariant": "BOL",
         "testsList": [
             "test_sign_add_init_pos_tx_short_tx",

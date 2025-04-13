@@ -110,7 +110,7 @@ typedef struct {
 
 typedef struct {
     tx_parameter_t name;
-    tx_parameter_t parameters[100];
+    tx_parameter_t parameters[9];
 } tx_method_t;
 
 typedef struct {

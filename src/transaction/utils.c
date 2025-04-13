@@ -90,7 +90,7 @@ void process_precision(const char *input, int precision, char *output, size_t ou
     size_t len = strlen(input);
     if (len == 0) {  // Handle empty string
         if (output_len > 1)
-        strlcpy(output, "0",sizeof(output));
+            strlcpy(output, "0", sizeof(output));
         else if (output_len > 0)
             output[0] = '\0';
         return;
@@ -240,59 +240,60 @@ void uint128_to_decimal_string(uint64_t high, uint64_t low, char *result, size_t
     memcpy(result, &buffer[index], required_length);
 }
 
-bool get_token_amount(const uint8_t value_len,
-                      const uint64_t value[2],
-                      const uint8_t decimals,
-                      char *amount,
-                      size_t amount_len) {
-    if (value_len >= OPCODE_VALUE) {
-        return format_fpu64_trimmed(amount, amount_len, value[0], decimals);
-    } else {
-        if (value_len <= UINT64_T_BYTE_LEN) {
-            return format_fpu64_trimmed(amount, amount_len, value[0], decimals);
-        } else if (value_len > TWO_UINT64_T_BYTE_LEN) {
-            return false;
-        } else {
-            char totalAmount[MAX_LENGTH];
-            uint128_to_decimal_string(value[1], value[0], totalAmount, sizeof(totalAmount));
-            process_precision(totalAmount, decimals, amount, amount_len);
-            explicit_bzero(&totalAmount, sizeof(totalAmount));
-            return true;
-        }
-    }
-}
-
 bool get_token_value(uint8_t value_len,
-                     uint8_t *data,
-                     const uint8_t decimals,
-                     char *amount,
-                     size_t amount_len) {
+                         uint8_t *data,
+                         uint8_t decimals,
+                         tx_contract_type_e type,
+                         char *amount,
+                         size_t amount_len) {
+    char temp_buffer[MAX_LENGTH];
+
+    explicit_bzero(amount, amount_len);
+    explicit_bzero(temp_buffer, sizeof(temp_buffer));
+
     if (value_len == 1) {
         uint8_t value = *data;
         return format_fpu64_trimmed(amount, amount_len, value - OPCODE_PUSH_NUMBER, decimals);
-    } else {
-        if (value_len <= UINT64_T_BYTE_LEN) {
-            return format_fpu64_trimmed(amount,
-                                        amount_len,
-                                        getValueByLen(data + 1, value_len),
-                                        decimals);
-        } else if (value_len > TWO_UINT64_T_BYTE_LEN) {
-            return false;
-        } else {
-            char totalAmount[MAX_LENGTH];
-            uint128_to_decimal_string(
-                getValueByLen(data + 1 + UINT64_T_BYTE_LEN, value_len - UINT64_T_BYTE_LEN),
-                getValueByLen(data + 1, value_len - UINT64_T_BYTE_LEN),
-                totalAmount,
-                sizeof(totalAmount));
-            process_precision(totalAmount, decimals, amount, amount_len);
-            explicit_bzero(&totalAmount, sizeof(totalAmount));
-            return true;
-        }
     }
+
+    if (value_len > UINT128_BYTE_LEN) {
+        PRINTF("format_token_amount: Invalid value_len=%d, max=%d\n", value_len, UINT128_BYTE_LEN);
+        return false;
+    }
+
+    if (value_len <= UINT64_BYTE_LEN) {
+        uint64_t value = getValueByLen(data + 1, value_len);
+        PRINTF("format_token_amount: value_len=%d, decimals=%d, value=%llu\n",
+               value_len,
+               decimals,
+               value);
+        return format_fpu64_trimmed(amount, amount_len, value, decimals);
+    }
+
+    uint8_t offset = (type == WASMVM_CONTRACT) ? 0 : 1;
+    uint64_t high = getValueByLen(data + offset + UINT64_BYTE_LEN, value_len - UINT64_BYTE_LEN);
+    uint64_t low = getValueByLen(data + offset, value_len - UINT64_BYTE_LEN);
+    uint128_to_decimal_string(high, low, temp_buffer, sizeof(temp_buffer));
+    process_precision(temp_buffer, decimals, amount, amount_len);
+
+    explicit_bzero(temp_buffer, sizeof(temp_buffer));
+    return true;
 }
 
 void get_ong_fee(uint64_t gas_price, uint64_t gas_limit, char *out, size_t out_len) {
     format_fpu64_trimmed(out, out_len, gas_price * gas_limit, 9);
     strlcat(out, ONG_VIEW, out_len);
+}
+
+uint64_t get_data_value(uint8_t *data,uint8_t len){
+    if (len == 1) {
+        return *data - OPCODE_PUSH_NUMBER;
+    }
+    if (len > UINT64_BYTE_LEN) {
+        return 0;
+    }
+    if (len <= UINT64_BYTE_LEN) {
+        return getValueByLen(data + 1, len);
+    } 
+    return 0;
 }

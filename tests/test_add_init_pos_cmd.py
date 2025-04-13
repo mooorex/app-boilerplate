@@ -1,4 +1,3 @@
-
 import pytest
 
 from application_client.boilerplate_transaction import Transaction

@@ -260,13 +260,13 @@ void get_tx_payload(payload_t *payload, size_t *count, payload_storage_t *storag
 
     get_wing_addr(storage[3].contract_addr);
     payload[3].contract_addr = storage[3].contract_addr;
-    payload[3].token_decimals = 0;
+    payload[3].token_decimals = 9;
     payload[3].methods = storage[3].methods;
     get_neovm_oep4_token_methods((tx_method_signature_t *) payload[3].methods, &method_count);
 
     get_wtk_addr(storage[4].contract_addr);
     payload[4].contract_addr = storage[4].contract_addr;
-    payload[4].token_decimals = 0;
+    payload[4].token_decimals = 9;
     payload[4].methods = storage[4].methods;
     get_wasmvm_oep4_token_methods((tx_method_signature_t *) payload[4].methods, &method_count);
 

@@ -19,7 +19,9 @@ ifeq ($(BOLOS_SDK),)
 $(error Environment variable BOLOS_SDK is not set)
 endif
 
-#include $(BOLOS_SDK)/Makefile.defines
+#ifeq ($(TARGET_NAME),TARGET_NANOS)
+	include $(BOLOS_SDK)/Makefile.defines
+#endif
 
 ########################################
 #        Mandatory configuration       #
@@ -38,6 +40,7 @@ APP_SOURCE_PATH += src
 
 # Application icons following guidelines:
 # https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
+ICON_NANOS = icons/app_ont16px.gif
 ICON_NANOSP = icons/app_ont14px.gif
 ICON_NANOX = icons/app_ont14px.gif
 ICON_STAX = icons/app_ont32px.gif
@@ -86,7 +89,7 @@ DEBUG = 1
 ########################################
 ENABLE_BLUETOOTH = 1
 #ENABLE_NFC = 1
-ENABLE_NBGL_FOR_NANO_DEVICES = 1
+#ENABLE_NBGL_FOR_NANO_DEVICES = 1
 ########################################
 #         NBGL custom features         #
 ########################################
