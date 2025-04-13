@@ -122,7 +122,7 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
     LEDGER_ASSERT(pairs != NULL, "NULL pairs");
     LEDGER_ASSERT(cur != NULL, "NULL cur");
 
-    uint64_t pks_num = 0, amts_num = 0;
+    uint64_t pks_num = 0;
 
     if (!parse_amount(buf, &pairs[0]) || !convert_bytes_to_uint64_le(&pairs[0], &pks_num) ||
         pks_num == 0 || !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
@@ -136,21 +136,20 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
         }
     }
 
-    if (!parse_amount(buf, &pairs[pks_num + 1]) ||
-        !convert_bytes_to_uint64_le(&pairs[pks_num + 1], &amts_num) || pks_num != amts_num ||
+    if (!parse_check_amount(buf, pks_num)||
         !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
     }
 
-    for (size_t i = 1; i <= amts_num; i++) {
-        if (!parse_amount(buf, &pairs[pks_num + 1 + i]) ||
-            (i != amts_num &&
+    for (size_t i = 1; i <= pks_num; i++) {
+        if (!parse_amount(buf, &pairs[pks_num + i]) ||
+            (i != pks_num &&
              !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
             return false;
         }
     }
 
-    *cur += (pks_num * 2 + 2);
+    *cur += (pks_num * 2 + 1);
     return true;
 }
 
@@ -231,8 +230,10 @@ bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
     LEDGER_ASSERT(amount != NULL, "NULL amount");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
-    if (amount->len > sizeof(uint64_t) || amount->len == 0) return false;
-
+    if (amount->len > sizeof(uint64_t) || amount->len == 0) {
+        return false;
+    }
+    
     *out = 0;
     uint8_t amt = amount->data[0];
 
@@ -242,7 +243,7 @@ bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
     }
 
     for (size_t i = 1; i <= amount->len; i++) {
-        *out |= ((uint64_t) amount->data[i] << (8 * i));
+        *out |= ((uint64_t) amount->data[i] << (8 * i - 8));
     }
 
     return true;
