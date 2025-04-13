@@ -120,7 +120,7 @@ static void parse_params(transaction_t *tx,
                             configs[i].param_idx,
                             g_buffers[configs[i].buffer_idx],
                             MAX_BUFFER_LEN);
-    }
+   }
 }
 
 // Unified handler function
@@ -522,7 +522,7 @@ static void review_choice(bool confirm) {
         ui_menu_main);
 }
 
-static int ui_display_transaction_bs_choice(bool is_blind_signed) {
+int ui_display_transaction(bool is_blind_signed) {
     if (G_context.req_type != CONFIRM_TRANSACTION || G_context.state != STATE_PARSED) {
         G_context.state = STATE_NONE;
         return io_send_sw(SW_BAD_STATE);
@@ -580,11 +580,4 @@ static int ui_display_transaction_bs_choice(bool is_blind_signed) {
     return 0;
 }
 
-int ui_display_transaction(void) {
-    return ui_display_transaction_bs_choice(false);
-}
-
-int ui_display_blind_signed_transaction(void) {
-    return ui_display_transaction_bs_choice(true);
-}
 #endif

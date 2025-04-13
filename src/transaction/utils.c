@@ -280,10 +280,6 @@ bool get_token_value(uint8_t value_len,
     return true;
 }
 
-void get_ong_fee(uint64_t gas_price, uint64_t gas_limit, char *out, size_t out_len) {
-    format_fpu64_trimmed(out, out_len, gas_price * gas_limit, 9);
-    strlcat(out, ONG_VIEW, out_len);
-}
 
 uint64_t get_data_value(uint8_t *data,uint8_t len){
     if (len == 1) {
@@ -296,4 +292,16 @@ uint64_t get_data_value(uint8_t *data,uint8_t len){
         return getValueByLen(data + 1, len);
     } 
     return 0;
+}
+bool get_ong_fee(uint64_t gas_price, uint64_t gas_limit) {
+    if (gas_price == 0 || gas_limit == 0 || gas_price > UINT64_MAX / gas_limit ||
+        !format_fpu64_trimmed(G_context.display_data.gas_fee,
+                              sizeof(G_context.display_data.gas_fee),
+                              gas_price * gas_limit,
+                              9)) {
+        return false;
+    }
+    strlcat(G_context.display_data.gas_fee, ONG_VIEW, sizeof(G_context.display_data.gas_fee));
+    
+    return true;
 }

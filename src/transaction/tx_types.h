@@ -39,12 +39,10 @@ static const uint8_t NATIVE_INVOKE[] = {0x16, 'O', 'n', 't', 'o', 'l', 'o', 'g',
 
 typedef enum {
     PARSING_OK = 1,
-    NONCE_PARSING_ERROR = -1,
-    TO_PARSING_ERROR = -2,
-    VALUE_PARSING_ERROR = -3,
-    WRONG_LENGTH_ERROR = -7,
-    BYTECODE_PARSING_ERROR = -8,
-    PERSONAL_MESSAGE_PARSING_ERROR = -9
+    WRONG_LENGTH_ERROR = -2,
+    BYTECODE_PARSING_ERROR = -3,
+    PARSING_TX_NOT_DEFINED = -4,
+    PERSONAL_MESSAGE_PARSING_ERROR = -6
 } parser_status_e;
 
 

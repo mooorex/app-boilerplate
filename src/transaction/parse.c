@@ -13,7 +13,7 @@
 #include "ledger_assert.h"
 #endif
 
-bool parse_constant(buffer_t *buf, const uint8_t *str, size_t len) {
+bool parse_check_constant(buffer_t *buf, const uint8_t *str, size_t len) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(str != NULL, "NULL str");
     LEDGER_ASSERT(len > 0, "len is 0");
@@ -32,10 +32,9 @@ bool parse_method(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = size;
-    out->data = (uint8_t *)(buf->ptr + buf->offset);
+    out->data = (uint8_t *) (buf->ptr + buf->offset);
     return buffer_seek_cur(buf, size);
 }
-
 bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(out != NULL, "NULL out");
@@ -49,7 +48,7 @@ bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *out) {
     }
 
     out->len = ADDRESS_LEN;
-    out->data = (uint8_t *)(buf->ptr + buf->offset);
+    out->data = (uint8_t *) (buf->ptr + buf->offset);
     out->type = PARAM_ADDR;
     return buffer_seek_cur(buf, ADDRESS_LEN);
 }
@@ -70,9 +69,17 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = amt;
-    out->data = (uint8_t *)(buf->ptr + buf->offset - 1);
+    out->data = (uint8_t *) (buf->ptr + buf->offset - 1);
     out->type = PARAM_AMOUNT;
     return !stepping || buffer_seek_cur(buf, out->len);
+}
+
+bool parse_check_amount(buffer_t *buf, uint64_t num) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+
+    tx_parameter_t tmp;
+    uint64_t out = 0;
+    return parse_amount(buf, &tmp) && convert_bytes_to_uint64_le(&tmp, &out) && out == num;
 }
 
 bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
@@ -83,7 +90,7 @@ bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
     if (!buffer_can_read(buf, size)) return false;
 
     out->len = size;
-    out->data = (uint8_t *)(buf->ptr + buf->offset);
+    out->data = (uint8_t *) (buf->ptr + buf->offset);
     out->type = PARAM_UINT128;
     return buffer_seek_cur(buf, size);
 }
@@ -98,7 +105,7 @@ bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
     }
 
     out->len = size;
-    out->data = (uint8_t *)(buf->ptr + buf->offset);
+    out->data = (uint8_t *) (buf->ptr + buf->offset);
     out->type = PARAM_PUBKEY;
     return buffer_seek_cur(buf, size);
 }
@@ -118,27 +125,27 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
     uint64_t pks_num = 0, amts_num = 0;
 
     if (!parse_amount(buf, &pairs[0]) || !convert_bytes_to_uint64_le(&pairs[0], &pks_num) ||
-        pks_num == 0 || !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
+        pks_num == 0 || !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
     }
 
     for (size_t i = 1; i <= pks_num; i++) {
         if (!parse_pk(buf, &pairs[i]) ||
-            !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
+            !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
             return false;
         }
     }
 
     if (!parse_amount(buf, &pairs[pks_num + 1]) ||
         !convert_bytes_to_uint64_le(&pairs[pks_num + 1], &amts_num) || pks_num != amts_num ||
-        !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
+        !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
     }
 
     for (size_t i = 1; i <= amts_num; i++) {
         if (!parse_amount(buf, &pairs[pks_num + 1 + i]) ||
             (i != amts_num &&
-             !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
+             !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
             return false;
         }
     }
@@ -152,14 +159,14 @@ bool parse_trasfer_state(buffer_t *buf, tx_parameter_t *transfer_state, size_t *
     LEDGER_ASSERT(transfer_state != NULL, "NULL transfer_state");
     LEDGER_ASSERT(cur != NULL, "NULL cur");
 
-    if (!parse_constant(buf, OPCODE_ST_BEGIN, ARRAY_LENGTH(OPCODE_ST_BEGIN)) ||
+    if (!parse_check_constant(buf, OPCODE_ST_BEGIN, ARRAY_LENGTH(OPCODE_ST_BEGIN)) ||
         !parse_address(buf, true, &transfer_state[0]) ||
-        !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
+        !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
         !parse_address(buf, true, &transfer_state[1]) ||
-        !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
+        !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
         !parse_amount(buf, &transfer_state[2]) ||
-        !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
-        !parse_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
+        !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)) ||
+        !parse_check_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
         return false;
     }
 
@@ -168,9 +175,9 @@ bool parse_trasfer_state(buffer_t *buf, tx_parameter_t *transfer_state, size_t *
 }
 
 bool parse_method_params(buffer_t *buf,
-                        transaction_t *tx,
-                        const tx_parameter_type_e *params,
-                        size_t *params_num) {
+                         transaction_t *tx,
+                         const tx_parameter_type_e *params,
+                         size_t *params_num) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
     LEDGER_ASSERT(params != NULL, "NULL params");
@@ -183,7 +190,9 @@ bool parse_method_params(buffer_t *buf,
         (*params_num)++;
         switch (*params) {
             case PARAM_ADDR:
-                if (!parse_address(buf, tx->contract.type != WASMVM_CONTRACT, &tx->method.parameters[cur++])) {
+                if (!parse_address(buf,
+                                   tx->contract.type != WASMVM_CONTRACT,
+                                   &tx->method.parameters[cur++])) {
                     return false;
                 }
                 break;
@@ -210,7 +219,7 @@ bool parse_method_params(buffer_t *buf,
         }
 
         if (tx->contract.type == NATIVE_CONTRACT &&
-            !parse_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
+            !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
             return false;
         }
     }
@@ -233,7 +242,7 @@ bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
     }
 
     for (size_t i = 1; i <= amount->len; i++) {
-        *out |= ((uint64_t)amount->data[i] << (8 * i));
+        *out |= ((uint64_t) amount->data[i] << (8 * i));
     }
 
     return true;

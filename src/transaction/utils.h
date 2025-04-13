@@ -81,6 +81,5 @@ void uint128_to_decimal_string(uint64_t high, uint64_t low, char* result, size_t
 
 bool get_token_value(uint8_t value_len,uint8_t *data,const uint8_t decimals,const tx_contract_type_e type,char* amount,size_t amount_len);
 
-void get_ong_fee(uint64_t gas_price,uint64_t gas_limit,char* out, size_t out_len);
-
 uint64_t get_data_value(uint8_t *data,uint8_t len);
+bool get_ong_fee(uint64_t gas_price,uint64_t gas_limit);

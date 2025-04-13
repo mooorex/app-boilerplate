@@ -11,7 +11,10 @@
 bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out);
 bool parse_method_params(buffer_t *buf, transaction_t *tx, const tx_parameter_type_e *params, size_t *params_num);
 
-bool parse_constant(buffer_t *buf, const uint8_t *str, size_t len);
+bool parse_check_constant(buffer_t *buf, const uint8_t *str, size_t len);
+bool parse_check_amount(buffer_t *buf, uint64_t num);
+
+
 bool parse_method(buffer_t *buf, tx_parameter_t *method_name); 
 bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *address);
 bool parse_amount(buffer_t *buf, tx_parameter_t *amount) ;
