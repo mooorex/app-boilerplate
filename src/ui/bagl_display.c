@@ -248,8 +248,10 @@ static void handle_params(transaction_t *tx,
     param_config_t local_configs[MAX_CONFIGS];
     memcpy(local_configs, configs, config_count * sizeof(param_config_t));
 
-    if (strcmp(tx->method.name.data, METHOD_TRANSFER) == 0 || strcmp(tx->method.name.data, METHOD_TRANSFER_V2) == 0 ||
-        strcmp(tx->method.name.data, METHOD_APPROVE) == 0 || strcmp(tx->method.name.data, METHOD_APPROVE_V2) == 0) {
+    if (strcmp(tx->method.name.data, METHOD_TRANSFER) == 0 ||
+        strcmp(tx->method.name.data, METHOD_TRANSFER_V2) == 0 ||
+        strcmp(tx->method.name.data, METHOD_APPROVE) == 0 ||
+        strcmp(tx->method.name.data, METHOD_APPROVE_V2) == 0) {
         switch (tx->contract.type) {
             case NATIVE_CONTRACT:
                 local_configs[0].param_idx = 2;  // AMOUNT
@@ -695,9 +697,34 @@ static void create_transaction_flow(transaction_t *tx) {
     add_step(&index, FLOW_END_STEP);
 }
 
-int ui_display_transaction(void) {
-    create_transaction_flow(&G_context.tx_info.transaction);
-    ux_flow_init(0, ux_display_tx_flow, NULL);
+UX_FLOW(ux_display_blind_signed_flow,
+        &ux_display_review_step,
+        &ux_display_blind_signing_step,
+        &ux_display_signer_step,
+        &ux_display_approve_step,
+        &ux_display_reject_step);
+
+int ui_bagl_display_blind_transaction_bs_choice(void) {
+    if (G_context.req_type != CONFIRM_TRANSACTION) {
+        G_context.state = STATE_NONE;
+        return io_send_sw(SW_BAD_STATE);
+    }
+
+    clear_buffers();
+    strlcpy(g_content, BLIND_SIGN_TX_MSG, sizeof(g_content));
+    g_validate_callback = ui_action_validate_transaction;
+
+    ux_flow_init(0, ux_display_blind_signed_flow, NULL);
+    return 0;
+}
+
+int ui_display_transaction(bool is_blind_signed) {
+    if (is_blind_signed) {
+        return ui_bagl_display_blind_transaction_bs_choice();
+    } else {
+        create_transaction_flow(&G_context.tx_info.transaction);
+        ux_flow_init(0, ux_display_tx_flow, NULL);
+    }
     return 0;
 }
 
@@ -723,31 +750,6 @@ int ui_display_address(void) {
     g_validate_callback = ui_action_validate_pubkey;
     ux_flow_init(0, ux_display_pubkey_flow, NULL);
     return 0;
-}
-
-UX_FLOW(ux_display_blind_signed_flow,
-        &ux_display_review_step,
-        &ux_display_blind_signing_step,
-        &ux_display_signer_step,
-        &ux_display_approve_step,
-        &ux_display_reject_step);
-
-int ui_bagl_display_blind_transaction_bs_choice(void) {
-    if (G_context.req_type != CONFIRM_TRANSACTION) {
-        G_context.state = STATE_NONE;
-        return io_send_sw(SW_BAD_STATE);
-    }
-
-    clear_buffers();
-    strlcpy(g_content, BLIND_SIGN_TX_MSG, sizeof(g_content));
-    g_validate_callback = ui_action_validate_transaction;
-
-    ux_flow_init(0, ux_display_blind_signed_flow, NULL);
-    return 0;
-}
-
-int ui_display_blind_signed_transaction(void) {
-    return ui_bagl_display_blind_transaction_bs_choice();
 }
 
 UX_FLOW(ux_display_personal_msg_flow,
