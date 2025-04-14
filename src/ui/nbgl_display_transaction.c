@@ -180,21 +180,21 @@ void parse_param_to_pair(transaction_t *tx,
             break;
         case PARAM_UINT128:
         case PARAM_AMOUNT: {
-            uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN], gov_addr[ADDRESS_LEN];
-            get_ont_addr(ont_addr);
-            get_ong_addr(ong_addr);
-            get_gov_addr(gov_addr);
+            //uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN], gov_addr[ADDRESS_LEN];
+            //get_ont_addr(ont_addr);
+            //get_ong_addr(ong_addr);
+            //get_gov_addr(gov_addr);
             get_token_value(param->len,
                             param->data,
                             tx->contract.token_decimals,
                             tx->contract.type,
                             buffer,
                             buffer_len);
-            if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0)
+            if (memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0)
                 strlcat(buffer, ONT_VIEW, buffer_len);
-            else if (memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0)
+            else if (memcmp(tx->contract.addr.data,ONG_ADDR, ADDRESS_LEN) == 0)
                 strlcat(buffer, ONG_VIEW, buffer_len);
-            else if (memcmp(tx->contract.addr.data, gov_addr, ADDRESS_LEN) == 0) {
+            else if (memcmp(tx->contract.addr.data,GOV_ADDR, ADDRESS_LEN) == 0) {
                 if (tx->method.name.len == strlen(METHOD_SET_FEE_PERCENTAGE) &&
                     memcmp(tx->method.name.data, METHOD_SET_FEE_PERCENTAGE, tx->method.name.len) ==
                         0) {

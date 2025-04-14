@@ -300,11 +300,11 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
     }
 
     if (tx->contract.type == NATIVE_CONTRACT) {
-        uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN];
-        get_ont_addr(ont_addr);
-        get_ong_addr(ong_addr);
-        bool is_ont = memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0;
-        bool is_ong = memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0;
+        //uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN];
+        //get_ont_addr(ont_addr);
+        //get_ong_addr(ong_addr);
+        bool is_ont = memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
+        bool is_ong = memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
         if (is_ont || is_ong) {
             bool is_transfer =
                 (tx->method.name.len == strlen(METHOD_TRANSFER) &&

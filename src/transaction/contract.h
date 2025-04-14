@@ -22,6 +22,12 @@
 #define METHOD_WITHDRAW "withdraw"
 #define METHOD_WITHDRAW_FEE "withdrawFee"
 
+#define ONG_ADDR ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02")
+#define ONT_ADDR ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01")
+#define GOV_ADDR ("\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x07")
+#define WTK_ADDR ("\x77\xF1\xFF\xE3\xAD\xA5\xDD\x78\x62\xF9\x60\x1F\x5A\x0A\x05\x8A\x6B\xD8\x27\x43")
+#define MYT_ADDR ("\xff\x92\xa1\xa3\x41\x8d\x53\x68\x40\x05\xaf\x98\xd5\xf1\xad\xd0\x5f\x15\xed\x19")
+#define WING_ADDR ("\x80\xef\x58\x6e\xf5\xff\xf2\xb1\xea\x83\x78\x39\xd6\x62\xa5\x27\xcd\x9f\xc5\x00")
 // 结构体定义
 typedef struct {
     const char *name;
@@ -29,7 +35,7 @@ typedef struct {
 } tx_method_signature_t;
 
 typedef struct {
-    const uint8_t *contract_addr;
+    const char *contract_addr;
     uint8_t token_decimals;
     const tx_method_signature_t *methods;
 } payload_t;
@@ -41,6 +47,7 @@ typedef struct {
 } payload_storage_t;
 
 // 地址生成函数
+/*
 static inline void get_ont_addr(uint8_t *addr) {
     const uint8_t ont[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
@@ -76,6 +83,7 @@ static inline void get_myt_addr(uint8_t *addr) {
                            0xaf, 0x98, 0xd5, 0xf1, 0xad, 0xd0, 0x5f, 0x15, 0xed, 0x19};
     memcpy(addr, myt, ADDRESS_LEN);
 }
+    */
 
 // 方法签名和 txPayload 生成函数原型
 void get_native_token_methods(tx_method_signature_t *methods, size_t *count);

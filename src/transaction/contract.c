@@ -132,38 +132,38 @@ void get_native_governance_methods(tx_method_signature_t *methods, size_t *count
 void get_tx_payload(payload_t *payload, size_t *count, payload_storage_t *storage) {
     size_t method_count;
 
-    get_ont_addr(storage[0].contract_addr);
-    payload[0].contract_addr = storage[0].contract_addr;
+   // get_ont_addr(storage[0].contract_addr);
+    payload[0].contract_addr = ONT_ADDR;
     payload[0].token_decimals = 0;
     payload[0].methods = storage[0].methods;
     get_native_token_methods((tx_method_signature_t *) payload[0].methods, &method_count);
 
-    get_ong_addr(storage[1].contract_addr);
-    payload[1].contract_addr = storage[1].contract_addr;
+    //get_ong_addr(storage[1].contract_addr);
+    payload[1].contract_addr = ONG_ADDR;
     payload[1].token_decimals = 9;
     payload[1].methods = storage[1].methods;
     get_native_token_methods((tx_method_signature_t *) payload[1].methods, &method_count);
 
-    get_gov_addr(storage[2].contract_addr);
-    payload[2].contract_addr = storage[2].contract_addr;
+    //get_gov_addr(storage[2].contract_addr);
+    payload[2].contract_addr = GOV_ADDR;
     payload[2].token_decimals = 0;
     payload[2].methods = storage[2].methods;
     get_native_governance_methods((tx_method_signature_t *) payload[2].methods, &method_count);
 
-    get_wing_addr(storage[3].contract_addr);
-    payload[3].contract_addr = storage[3].contract_addr;
+    //get_wing_addr(storage[3].contract_addr);
+    payload[3].contract_addr = WING_ADDR;
     payload[3].token_decimals = 9;
     payload[3].methods = storage[3].methods;
     get_neovm_oep4_token_methods((tx_method_signature_t *) payload[3].methods, &method_count);
 
-    get_wtk_addr(storage[4].contract_addr);
-    payload[4].contract_addr = storage[4].contract_addr;
+    //get_wtk_addr(storage[4].contract_addr);
+    payload[4].contract_addr = WTK_ADDR;
     payload[4].token_decimals = 9;
     payload[4].methods = storage[4].methods;
     get_wasmvm_oep4_token_methods((tx_method_signature_t *) payload[4].methods, &method_count);
 
-    get_myt_addr(storage[5].contract_addr);
-    payload[5].contract_addr = storage[5].contract_addr;
+    //get_myt_addr(storage[5].contract_addr);
+    payload[5].contract_addr = MYT_ADDR;
     payload[5].token_decimals = 18;
     payload[5].methods = storage[5].methods;
     get_neovm_oep4_token_methods((tx_method_signature_t *) payload[5].methods, &method_count);
