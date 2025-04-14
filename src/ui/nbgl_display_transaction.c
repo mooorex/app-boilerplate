@@ -137,7 +137,7 @@ static void handle_params(transaction_t *tx,
             (*nbPairs)++;
         }
         if (pubkey_num > 1) {
-            format_u64(g_buffers[curr++], MAX_BUFFER_LEN, pubkey_num);
+            format_u64(g_buffers[curr], MAX_BUFFER_LEN, pubkey_num);
             tag_pairs[*nbPairs].item = NODE_AMOUNT;
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
@@ -149,8 +149,8 @@ static void handle_params(transaction_t *tx,
                                          tx->method.parameters[2 + pubkey_num + i].len);
             }
             tag_pairs[*nbPairs].item = TOTAL_WITHDRAW;
-            tag_pairs[*nbPairs].value = g_buffers[curr++];
-            format_u64(g_buffers[curr++], MAX_BUFFER_LEN, amount);
+            tag_pairs[*nbPairs].value = g_buffers[curr];
+            format_u64(g_buffers[curr], MAX_BUFFER_LEN, amount);
             strlcat(g_buffers[curr++], ONT_VIEW, MAX_BUFFER_LEN);
             (*nbPairs)++;
         }
@@ -263,9 +263,9 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_TRANSFER_V2, method_len) == 0) {
         method.title = TRANSFER_TITLE;
         method.content = TRANSFER_CONTENT;
-        configs[0] = (param_config_t) {FROM, 0};
-        configs[1] = (param_config_t) {TO, 1};
-        configs[2] = (param_config_t) {AMOUNT, 2};
+        configs[0] = (param_config_t) {FROM, 1};
+        configs[1] = (param_config_t) {TO, 2};
+        configs[2] = (param_config_t) {AMOUNT, 0};
         method.configs = configs;
         method.config_count = 3;
     } else if (method_len == strlen(METHOD_TRANSFER_FROM) &&
@@ -289,10 +289,10 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_TRANSFER_FROM_V2, method_len) == 0) {
         method.title = TRANSFER_FROM_TITLE;
         method.content = TRANSFER_FROM_CONTENT;
-        configs[0] = (param_config_t) {SENDER, 3};
-        configs[1] = (param_config_t) {FROM, 0};
-        configs[2] = (param_config_t) {TO, 1};
-        configs[3] = (param_config_t) {AMOUNT, 2};
+        configs[0] = (param_config_t) {SENDER, 1};
+        configs[1] = (param_config_t) {FROM, 2};
+        configs[2] = (param_config_t) {TO, 3};
+        configs[3] = (param_config_t) {AMOUNT, 0};
         method.configs = configs;
         method.config_count = 4;
     } else if (method_len == strlen(METHOD_APPROVE) &&
@@ -300,13 +300,13 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         method.title = APPROVE_TITLE;
         method.content = APPROVE_CONTENT;
         if(tx->contract.type != NEOVM_CONTRACT) {
-            configs[0] = (param_config_t) {FROM, 0};
-            configs[1] = (param_config_t) {TO, 1};
-            configs[2] = (param_config_t) {AMOUNT, 2};
+            configs[0] = (param_config_t) {FROM, 1};
+            configs[1] = (param_config_t) {TO, 2};
+            configs[2] = (param_config_t) {AMOUNT, 0};
         } else {
-            configs[0] = (param_config_t) {AMOUNT, 2};
-            configs[1] = (param_config_t) {TO, 1};
-            configs[2] = (param_config_t) {FROM, 0};
+            configs[0] = (param_config_t) {AMOUNT, 0};
+            configs[1] = (param_config_t) {TO, 2};
+            configs[2] = (param_config_t) {FROM, 1};
         }
         method.configs = configs;
         method.config_count = 3;
@@ -323,24 +323,24 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_REGISTER_CANDIDATE, method_len) == 0) {
         method.title = REGISTER_CANDIDATE_TITLE;
         method.content = REGISTER_CANDIDATE_CONTENT;
-        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 0};
-        configs[1] = (param_config_t) {ADDRESS, 1};
+        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
+        configs[1] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 2;
     } else if (method_len == strlen(METHOD_QUIT_NODE) &&
                memcmp(method_data, METHOD_QUIT_NODE, method_len) == 0) {
         method.title = QUIT_NODE_TITLE;
         method.content = QUIT_NODE_CONTENT;
-        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 0};
-        configs[1] = (param_config_t) {ADDRESS, 1};
+        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
+        configs[1] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 2;
     } else if (method_len == strlen(METHOD_ADD_INIT_POS) &&
                memcmp(method_data, METHOD_ADD_INIT_POS, method_len) == 0) {
         method.title = ADD_INIT_POS_TITLE;
         method.content = ADD_INIT_POS_CONTENT;
-        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 0};
-        configs[1] = (param_config_t) {ADDRESS, 1};
+        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
+        configs[1] = (param_config_t) {ADDRESS, 0};
         configs[2] = (param_config_t) {POS, 2};
         method.configs = configs;
         method.config_count = 3;
@@ -348,8 +348,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_REDUCE_INIT_POS, method_len) == 0) {
         method.title = REDUCE_INIT_POS_TITLE;
         method.content = REDUCE_INIT_POS_CONTENT;
-        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 0};
-        configs[1] = (param_config_t) {ADDRESS, 1};
+        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
+        configs[1] = (param_config_t) {ADDRESS, 0};
         configs[2] = (param_config_t) {AMOUNT, 2};
         method.configs = configs;
         method.config_count = 3;
@@ -357,8 +357,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_CHANGE_MAX_AUTH, method_len) == 0) {
         method.title = CHANGE_MAX_AUTHORIZATION_TITLE;
         method.content = CHANGE_MAX_AUTHORIZATION_CONTENT;
-        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 0};
-        configs[1] = (param_config_t) {ADDRESS, 1};
+        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
+        configs[1] = (param_config_t) {ADDRESS, 0};
         configs[2] = (param_config_t) {MAX_AUTHORIZE, 2};
         method.configs = configs;
         method.config_count = 3;
@@ -366,8 +366,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_SET_FEE_PERCENTAGE, method_len) == 0) {
         method.title = SET_FEE_PERCENTAGE_TITLE;
         method.content = SET_FEE_PERCENTAGE_CONTENT;
-        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 0};
-        configs[1] = (param_config_t) {ADDRESS, 1};
+        configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
+        configs[1] = (param_config_t) {ADDRESS, 0};
         configs[2] = (param_config_t) {PEER_COST, 2};
         configs[3] = (param_config_t) {STAKE_COST, 3};
         method.configs = configs;
