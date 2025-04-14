@@ -39,13 +39,14 @@
 #include "types.h"
 
 #define MAX_BUFFER_LEN 40
-#define NUM_BUFFERS    5  // amount, address, from, to, extra
+#define NUM_BUFFERS    4  // amount, address, from, to, extra
 #define MAX_CONFIGS    5  // Max number of param_config_t entries per method
 #define MAX_PARAMETERS 5
 #define MAX_NUM_STEPS  10
 
 typedef enum {
     BUFFER_AMOUNT = 0,
+    BUFFER_UINT128,
     BUFFER_ADDRESS,
     BUFFER_FROM,
     BUFFER_TO,
@@ -247,10 +248,10 @@ static void handle_params(transaction_t *tx,
     param_config_t local_configs[MAX_CONFIGS];
     memcpy(local_configs, configs, config_count * sizeof(param_config_t));
 
-    if (strncmp((const char *)tx->method.name.data, METHOD_TRANSFER,strlen(METHOD_TRANSFER)) == 0 ||
-        strncmp((const char *)tx->method.name.data, METHOD_TRANSFER_V2,strlen(METHOD_TRANSFER_V2)) == 0 ||
-        strncmp((const char *)tx->method.name.data, METHOD_APPROVE,strlen(METHOD_APPROVE)) == 0 ||
-        strncmp((const char *)tx->method.name.data, METHOD_APPROVE_V2,strlen(METHOD_APPROVE_V2)) == 0) {
+    if (strcmp(tx->method.name.data, METHOD_TRANSFER) == 0 ||
+        strcmp(tx->method.name.data, METHOD_TRANSFER_V2) == 0 ||
+        strcmp(tx->method.name.data, METHOD_APPROVE) == 0 ||
+        strcmp(tx->method.name.data, METHOD_APPROVE_V2) == 0) {
         switch (tx->contract.type) {
             case NATIVE_CONTRACT:
                 local_configs[0].param_idx = 2;  // AMOUNT
@@ -271,8 +272,8 @@ static void handle_params(transaction_t *tx,
                 PRINTF("Error: Unknown contract type %d\n", tx->contract.type);
                 return;  // Or set default indices, e.g., NATIVE_CONTRACT
         }
-    } else if (strncmp((const char *)tx->method.name.data, METHOD_TRANSFER_FROM,strlen(METHOD_TRANSFER_FROM)) == 0 ||
-        strncmp((const char *)tx->method.name.data, METHOD_TRANSFER_FROM_V2,strlen(METHOD_TRANSFER_FROM_V2)) == 0) {
+    } else if (strcmp(tx->method.name.data, METHOD_TRANSFER_FROM) == 0 ||
+               strcmp(tx->method.name.data, METHOD_TRANSFER_FROM_V2) == 0) {
         switch (tx->contract.type) {
             case NATIVE_CONTRACT:
                 local_configs[0].param_idx = 3;  // AMOUNT
@@ -316,20 +317,22 @@ static void handle_params(transaction_t *tx,
     }
 
     // Handle special cases
-    if (strncmp((const char *)tx->method.name.data, METHOD_REGISTER_CANDIDATE,strlen(METHOD_REGISTER_CANDIDATE)) == 0) {
+    if (strcmp(tx->method.name.data, METHOD_REGISTER_CANDIDATE) == 0) {
         add_step(step_index, &ux_display_stake_fee_step);
-    } else if (strncmp((const char *)tx->method.name.data, METHOD_AUTHORIZE_FOR_PEER,strlen(METHOD_AUTHORIZE_FOR_PEER)) == 0 ||
-               strncmp((const char *)tx->method.name.data, METHOD_UNAUTHORIZE_FOR_PEER,strlen(METHOD_UNAUTHORIZE_FOR_PEER)) == 0 ||
-               strncmp((const char *)tx->method.name.data, METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) {
+    } else if (strcmp(tx->method.name.data, METHOD_AUTHORIZE_FOR_PEER) == 0 ||
+               strcmp(tx->method.name.data, METHOD_UNAUTHORIZE_FOR_PEER) == 0 ||
+               strcmp(tx->method.name.data, METHOD_WITHDRAW) == 0) {
         uint8_t pubkey_num =
             get_data_value(tx->method.parameters[1].data, tx->method.parameters[1].len);
         if (pubkey_num > 1) {
             format_u64(g_buffers[BUFFER_EXTRA], MAX_BUFFER_LEN, pubkey_num);
             add_step(step_index, &ux_display_node_amount_step);
         }
-        if ( strncmp((const char *)tx->method.name.data, METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) {
+        if (strcmp(tx->method.name.data, METHOD_WITHDRAW) == 0) {
+            uint8_t amount_num = get_data_value(tx->method.parameters[2 + pubkey_num].data,
+                                                tx->method.parameters[2 + pubkey_num].len);
             u_int64_t amount = 0;
-            for (size_t i = 0; i < pubkey_num; i++) {
+            for (size_t i = 1; i <= amount_num; i++) {
                 amount += get_data_value(tx->method.parameters[2 + pubkey_num + i].data,
                                          tx->method.parameters[2 + pubkey_num + i].len);
             }
@@ -362,8 +365,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
     if (method_len == strlen(METHOD_TRANSFER) &&
         memcmp(method_data, METHOD_TRANSFER, method_len) == 0) {
         method.method_name = METHOD_TRANSFER;
-        method.title = OEP4_TX_TITLE;
-        method.content = OEP4_TX_CONTENT;
+        method.title = TRANSFER_TITLE;
+        method.content = TRANSFER_CONTENT;
         method.param_handler = handle_params;
         configs[0] = (param_config_t) {AMOUNT,
                                        PARAM_AMOUNT,
@@ -379,8 +382,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
     } else if (method_len == strlen(METHOD_TRANSFER_V2) &&
                memcmp(method_data, METHOD_TRANSFER_V2, method_len) == 0) {
         method.method_name = METHOD_TRANSFER_V2;
-        method.title = NATIVE_ONG_OR_ONT_TRANSFER_TITLE;
-        method.content = NATIVE_ONG_OR_ONT_TRANSFER_CONTENT;
+        method.title = TRANSFER_TITLE;
+        method.content = TRANSFER_CONTENT;
         method.param_handler = handle_params;
         configs[0] = (param_config_t) {AMOUNT,
                                        PARAM_AMOUNT,
@@ -442,8 +445,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
     } else if (method_len == strlen(METHOD_APPROVE) &&
                memcmp(method_data, METHOD_APPROVE, method_len) == 0) {
         method.method_name = METHOD_APPROVE;
-        method.title = SIGN_APPROVE_TX_TITLE;
-        method.content = SIGN_APPROVE_TX_CONTENT;
+        method.title = APPROVE_TITLE;
+        method.content = APPROVE_CONTENT;
         method.param_handler = handle_params;
         configs[0] = (param_config_t) {AMOUNT,
                                        PARAM_AMOUNT,
@@ -459,8 +462,8 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
     } else if (method_len == strlen(METHOD_APPROVE_V2) &&
                memcmp(method_data, METHOD_APPROVE_V2, method_len) == 0) {
         method.method_name = METHOD_APPROVE_V2;
-        method.title = SIGN_APPROVE_TX_TITLE;
-        method.content = SIGN_APPROVE_TX_CONTENT;
+        method.title = APPROVE_TITLE;
+        method.content = APPROVE_CONTENT;
         method.param_handler = handle_params;
         configs[0] = (param_config_t) {AMOUNT,
                                        PARAM_AMOUNT,
