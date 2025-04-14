@@ -45,7 +45,6 @@
 #define MAX_CONFIGS    7  // Max number of param_config_t entries per method
 #define MAX_PARAMETERS 5
 
-
 static char g_buffers[NUM_BUFFERS][MAX_BUFFER_LEN];
 static nbgl_contentTagValue_t pairs[10];
 static nbgl_contentTagValueList_t pairList;
@@ -53,7 +52,7 @@ static nbgl_contentTagValueList_t pairList;
 // Configuration for parameter parsing
 typedef struct {
     const char *tag;
-    uint8_t  pos;
+    uint8_t pos;
 } param_config_t;
 
 // Updated method_display_t to pass method_name to handler
@@ -86,7 +85,6 @@ static void handle_params(transaction_t *tx,
                           uint8_t *nbPairs,
                           param_config_t *configs,
                           uint8_t config_count) {
-
     for (uint8_t i = 0; i < config_count; i++) {
         parse_param_to_pair(tx,
                             &tag_pairs[configs[i].pos],
@@ -143,15 +141,9 @@ static void handle_params(transaction_t *tx,
             (*nbPairs)++;
         }
         if (memcmp(tx->method.name.data, METHOD_WITHDRAW, tx->method.name.len) == 0) {
-            uint64_t amount = 0;
-            for (size_t i = 0; i < pubkey_num; i++) {
-                amount += get_data_value(tx->method.parameters[2 + pubkey_num + i].data,
-                                         tx->method.parameters[2 + pubkey_num + i].len);
-            }
+            strlcat(G_context.display_data.amount, ONT_VIEW, sizeof(G_context.display_data.amount));
             tag_pairs[*nbPairs].item = TOTAL_WITHDRAW;
-            tag_pairs[*nbPairs].value = g_buffers[curr];
-            format_u64(g_buffers[curr], MAX_BUFFER_LEN, amount);
-            strlcat(g_buffers[curr++], ONT_VIEW, MAX_BUFFER_LEN);
+            tag_pairs[*nbPairs].value = G_context.display_data.amount;
             (*nbPairs)++;
         }
     }
@@ -248,7 +240,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         memcmp(method_data, METHOD_TRANSFER, method_len) == 0) {
         method.title = TRANSFER_TITLE;
         method.content = TRANSFER_CONTENT;
-        if(tx->contract.type != NEOVM_CONTRACT) {
+        if (tx->contract.type != NEOVM_CONTRACT) {
             configs[0] = (param_config_t) {FROM, 1};
             configs[1] = (param_config_t) {TO, 2};
             configs[2] = (param_config_t) {AMOUNT, 0};
@@ -272,7 +264,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_TRANSFER_FROM, method_len) == 0) {
         method.title = TRANSFER_FROM_TITLE;
         method.content = TRANSFER_FROM_CONTENT;
-        if(tx->contract.type != NEOVM_CONTRACT) {
+        if (tx->contract.type != NEOVM_CONTRACT) {
             configs[0] = (param_config_t) {SENDER, 1};
             configs[1] = (param_config_t) {FROM, 2};
             configs[2] = (param_config_t) {TO, 3};
@@ -299,7 +291,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_APPROVE, method_len) == 0) {
         method.title = APPROVE_TITLE;
         method.content = APPROVE_CONTENT;
-        if(tx->contract.type != NEOVM_CONTRACT) {
+        if (tx->contract.type != NEOVM_CONTRACT) {
             configs[0] = (param_config_t) {FROM, 1};
             configs[1] = (param_config_t) {TO, 2};
             configs[2] = (param_config_t) {AMOUNT, 0};
@@ -376,28 +368,28 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
                memcmp(method_data, METHOD_AUTHORIZE_FOR_PEER, method_len) == 0) {
         method.title = AUTHORIZE_FOR_PEER_TITLE;
         method.content = AUTHORIZE_FOR_PEER_CONTENT;
-        configs[0] = (param_config_t) {ADDRESS, 0 };
+        configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
     } else if (method_len == strlen(METHOD_UNAUTHORIZE_FOR_PEER) &&
                memcmp(method_data, METHOD_UNAUTHORIZE_FOR_PEER, method_len) == 0) {
         method.title = UN_AUTHORIZE_FOR_PEER_TITLE;
         method.content = UN_AUTHORIZE_FOR_PEER_CONTENT;
-        configs[0] = (param_config_t) {ADDRESS, 0 };
+        configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
     } else if (method_len == strlen(METHOD_WITHDRAW) &&
                memcmp(method_data, METHOD_WITHDRAW, method_len) == 0) {
         method.title = WITHDRAW_TITLE;
         method.content = WITHDRAW_CONTENT;
-        configs[0] = (param_config_t) {ADDRESS, 0 };
+        configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
     } else if (method_len == strlen(METHOD_WITHDRAW_FEE) &&
                memcmp(method_data, METHOD_WITHDRAW_FEE, method_len) == 0) {
         method.title = WITHDRAW_FEE_TITLE;
         method.content = WITHDRAW_FEE_CONTENT;
-        configs[0] = (param_config_t) {ADDRESS, 0 };
+        configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
     } else {
@@ -453,7 +445,11 @@ int ui_display_transaction(bool is_blind_signed) {
 
         const char *fee_tag =
             (G_context.tx_info.transaction.method.name.len == strlen(METHOD_REGISTER_CANDIDATE) &&
-               memcmp(G_context.tx_info.transaction.method.name.data, METHOD_REGISTER_CANDIDATE, G_context.tx_info.transaction.method.name.len) == 0)  ? GAS_FEE : FEE_ONG;
+             memcmp(G_context.tx_info.transaction.method.name.data,
+                    METHOD_REGISTER_CANDIDATE,
+                    G_context.tx_info.transaction.method.name.len) == 0)
+                ? GAS_FEE
+                : FEE_ONG;
         pairs[pairList.nbPairs].item = fee_tag;
         pairs[pairList.nbPairs].value = G_context.display_data.gas_fee;
         pairList.nbPairs++;

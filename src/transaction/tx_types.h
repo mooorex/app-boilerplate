@@ -108,7 +108,11 @@ typedef struct {
 
 typedef struct {
     tx_parameter_t name;
+#ifdef TARGET_NANOS
     tx_parameter_t parameters[9];
+#else
+    tx_parameter_t parameters[9];
+#endif
 } tx_method_t;
 
 typedef struct {

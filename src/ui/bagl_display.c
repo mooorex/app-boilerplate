@@ -39,7 +39,7 @@
 #include "types.h"
 
 #define MAX_BUFFER_LEN 40
-#define NUM_BUFFERS    5  // amount, address, from, to, extra
+#define NUM_BUFFERS    4  // amount, address, from, to, extra
 #define MAX_CONFIGS    5  // Max number of param_config_t entries per method
 #define MAX_PARAMETERS 5
 #define MAX_NUM_STEPS  10
@@ -53,7 +53,7 @@ typedef enum {
 } buffer_index_e;
 
 static char g_buffers[NUM_BUFFERS][MAX_BUFFER_LEN];
-static char g_content[66];
+static char g_content[68];
 static action_validate_cb g_validate_callback;
 static const ux_flow_step_t *ux_display_tx_flow[MAX_NUM_STEPS];
 
@@ -107,7 +107,7 @@ UX_STEP_NOCB(ux_display_gas_fee_step,
 UX_STEP_NOCB(ux_display_stake_fee_step, bnnn_paging, {.title = STAKE_FEE, .text = STAKE_FEE_ONG});
 UX_STEP_NOCB(ux_display_node_amount_step,
              bnnn_paging,
-             {.title = NODE_AMOUNT, .text = g_buffers[BUFFER_EXTRA]});
+             {.title = NODE_AMOUNT, .text = g_buffers[BUFFER_AMOUNT]});
 UX_STEP_NOCB(ux_display_max_authorize_step,
              bnnn_paging,
              {.title = MAX_AUTHORIZE, .text = g_buffers[BUFFER_AMOUNT]});
@@ -120,7 +120,7 @@ UX_STEP_NOCB(ux_display_stake_cost_step,
 UX_STEP_NOCB(ux_display_pos_step, bnnn_paging, {.title = POS, .text = g_buffers[BUFFER_AMOUNT]});
 UX_STEP_NOCB(ux_display_withdraw_step,
              bnnn_paging,
-             {.title = TOTAL_WITHDRAW, .text = g_buffers[BUFFER_AMOUNT]});
+             {.title = TOTAL_WITHDRAW, .text = G_context.display_data.amount});
 UX_STEP_NOCB(ux_display_decimals_step,
              bnnn_paging,
              {.title = DECIMALS, .text = g_buffers[BUFFER_EXTRA]});
@@ -253,19 +253,16 @@ static void handle_params(transaction_t *tx,
         memcmp(tx->method.name.data, METHOD_APPROVE_V2, strlen(METHOD_APPROVE_V2)) == 0) {
         switch (tx->contract.type) {
             case NATIVE_CONTRACT:
+            case WASMVM_CONTRACT: {
                 local_configs[0].param_idx = 2;  // AMOUNT
                 local_configs[1].param_idx = 0;  // FROM
                 local_configs[2].param_idx = 1;  // TO
                 break;
+            }
             case NEOVM_CONTRACT:
                 local_configs[0].param_idx = 0;  // AMOUNT
                 local_configs[1].param_idx = 1;  // FROM
                 local_configs[2].param_idx = 2;  // TO
-                break;
-            case WASMVM_CONTRACT:
-                local_configs[0].param_idx = 2;  // AMOUNT
-                local_configs[1].param_idx = 0;  // FROM
-                local_configs[2].param_idx = 1;  // TO
                 break;
             default:
                 PRINTF("Error: Unknown contract type %d\n", tx->contract.type);
@@ -275,23 +272,19 @@ static void handle_params(transaction_t *tx,
                memcmp(tx->method.name.data,METHOD_TRANSFER_FROM_V2,strlen(METHOD_TRANSFER_FROM_V2)) == 0) {
         switch (tx->contract.type) {
             case NATIVE_CONTRACT:
+            case WASMVM_CONTRACT:{
                 local_configs[0].param_idx = 3;  // AMOUNT
                 local_configs[1].param_idx = 0;  // SENDER
                 local_configs[2].param_idx = 1;  // FROM
                 local_configs[3].param_idx = 2;  // TO
                 break;
+            }
             case NEOVM_CONTRACT:
                 local_configs[0].param_idx = 0;  // AMOUNT
                 local_configs[1].param_idx = 1;  // SENDER
                 local_configs[2].param_idx = 2;  // FROM
                 local_configs[3].param_idx = 3;  // TO
-                break;
-            case WASMVM_CONTRACT:
-                local_configs[0].param_idx = 3;  // AMOUNT
-                local_configs[1].param_idx = 0;  // SENDER
-                local_configs[2].param_idx = 1;  // FROM
-                local_configs[3].param_idx = 2;  // TO
-                break;
+                break; 
             default:
                 PRINTF("Error: Unknown contract type %d\n", tx->contract.type);
                 return;
@@ -320,21 +313,18 @@ static void handle_params(transaction_t *tx,
         add_step(step_index, &ux_display_stake_fee_step);
     } else if (memcmp(tx->method.name.data,METHOD_AUTHORIZE_FOR_PEER,strlen(METHOD_AUTHORIZE_FOR_PEER)) == 0 ||
                memcmp(tx->method.name.data,METHOD_UNAUTHORIZE_FOR_PEER,strlen(METHOD_UNAUTHORIZE_FOR_PEER)) == 0 ||
-               memcmp(tx->method.name.data,METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) {
+               memcmp(tx->method.name.data,METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) {  
+
         uint8_t pubkey_num =
             get_data_value(tx->method.parameters[1].data, tx->method.parameters[1].len);
-        if (pubkey_num > 1) {
-            format_u64(g_buffers[BUFFER_EXTRA], MAX_BUFFER_LEN, pubkey_num);
+        if (pubkey_num >= 1) {
+            format_u64(g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN, pubkey_num);
             add_step(step_index, &ux_display_node_amount_step);
         }
-        if (memcmp(tx->method.name.data,METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) {
-            u_int64_t amount = 0;
-            for (size_t i = 0; i < pubkey_num; i++) {
-                amount += get_data_value(tx->method.parameters[2 + pubkey_num + i].data,
-                                         tx->method.parameters[2 + pubkey_num + i].len);
-            }
-            format_u64(g_buffers[BUFFER_AMOUNT], MAX_BUFFER_LEN, amount);
-            strlcat(g_buffers[BUFFER_AMOUNT], ONT_VIEW, MAX_BUFFER_LEN);
+        memcpy(g_content,tx->method.parameters[2].data, tx->method.parameters[2].len);
+        add_step(step_index, &ux_display_peer_pubkey_step);
+        if (memcmp(tx->method.name.data,METHOD_WITHDRAW,strlen(METHOD_WITHDRAW)) == 0) { 
+            strlcat(G_context.display_data.amount, ONT_VIEW, sizeof(G_context.display_data.amount));
             add_step(step_index, &ux_display_withdraw_step);
         }
     }
