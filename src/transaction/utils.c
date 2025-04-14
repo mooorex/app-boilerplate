@@ -263,10 +263,6 @@ bool get_token_value(uint8_t value_len,
 
     if (value_len <= UINT64_BYTE_LEN) {
         uint64_t value = getValueByLen(data + 1, value_len);
-        PRINTF("format_token_amount: value_len=%d, decimals=%d, value=%llu\n",
-               value_len,
-               decimals,
-               value);
         return format_fpu64_trimmed(amount, amount_len, value, decimals);
     }
 
