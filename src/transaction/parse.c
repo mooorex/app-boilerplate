@@ -6,6 +6,7 @@
 #include "macros.h"
 #include "contract.h"
 #include "globals.h"
+#include "format.h"
 
 #if defined(TEST) || defined(FUZZ)
 #include "assert.h"
