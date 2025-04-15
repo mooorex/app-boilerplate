@@ -44,8 +44,8 @@ static const char* const INFO_TYPES[SETTING_INFO_NB] = {"Version", "Developer"};
 static const char* const INFO_CONTENTS[SETTING_INFO_NB] = {APPVERSION, "Ledger"};
 
 // settings switches definitions
-enum { DUMMY_SWITCH_1_TOKEN = FIRST_USER_TOKEN };
-enum { DUMMY_SWITCH_1_ID = 0, SETTINGS_SWITCHES_NB };
+enum { BLIND_SIGNNING_SWITCH_TOKEN = FIRST_USER_TOKEN };
+enum { BLIND_SIGNNING_SWITCH_ID = 0, SETTINGS_SWITCHES_NB };
 
 static nbgl_contentSwitch_t switches[SETTINGS_SWITCHES_NB] = {0};
 
@@ -76,11 +76,11 @@ static void controls_callback(int token, uint8_t index, int page) {
     initSettingPage = page;
 
     uint8_t switch_value;
-    if (token == DUMMY_SWITCH_1_TOKEN) {
+    if (token == BLIND_SIGNNING_SWITCH_TOKEN) {
         // Dummy 1 switch touched
         // toggle the switch value
         switch_value = !N_storage.blind_signed_allowed;
-        switches[DUMMY_SWITCH_1_ID].initState = (nbgl_state_t) switch_value;
+        switches[BLIND_SIGNNING_SWITCH_ID].initState = (nbgl_state_t) switch_value;
         // store the new setting value in NVM
         nvm_write((void*) &N_storage.blind_signed_allowed, &switch_value, 1);
     }
@@ -89,11 +89,11 @@ static void controls_callback(int token, uint8_t index, int page) {
 // home page definition
 void ui_menu_main(void) {
     // Initialize switches data
-    switches[DUMMY_SWITCH_1_ID].initState = (nbgl_state_t) N_storage.blind_signed_allowed;
-    switches[DUMMY_SWITCH_1_ID].text = BLIND_SIGNING_SWITCH_TEXT;
-    switches[DUMMY_SWITCH_1_ID].subText = BLIND_SIGNING_SWITCH_SUBTEXT;
-    switches[DUMMY_SWITCH_1_ID].token = DUMMY_SWITCH_1_TOKEN;
-    // switches[DUMMY_SWITCH_1_ID].tuneId = TUNE_TAP_CASUAL;
+    switches[BLIND_SIGNNING_SWITCH_ID].initState = (nbgl_state_t) N_storage.blind_signed_allowed;
+    switches[BLIND_SIGNNING_SWITCH_ID].text = BLIND_SIGNING_SWITCH_TEXT;
+    switches[BLIND_SIGNNING_SWITCH_ID].subText = BLIND_SIGNING_SWITCH_SUBTEXT;
+    switches[BLIND_SIGNNING_SWITCH_ID].token = BLIND_SIGNNING_SWITCH_TOKEN;
+    // switches[BLIND_SIGNNING_SWITCH_ID].tuneId = TUNE_TAP_CASUAL;
 
     nbgl_useCaseHomeAndSettings(APPNAME,
                                 &ICON_APP_BOILERPLATE,

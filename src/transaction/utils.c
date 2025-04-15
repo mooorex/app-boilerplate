@@ -18,6 +18,7 @@
 
 #include "utils.h"
 #include "format.h"
+#include "../ui/types.h"
 
 #include "../globals.h"
 
