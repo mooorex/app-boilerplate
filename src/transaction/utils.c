@@ -14,77 +14,35 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *****************************************************************************/
-#include "utils.h"
 #include <stdio.h>
 
 #include "utils.h"
-#include "base58.h"
-#include "lcx_common.h"
-#include "lcx_sha256.h"
-#include "lcx_ripemd160.h"
-#include "crypto_helpers.h"
 #include "format.h"
+
 #include "../globals.h"
-#include "../ui/types.h"
 
-#if defined(TEST) || defined(FUZZ)
-#include "assert.h"
-#define LEDGER_ASSERT(x, y) assert(x)
-#else
-#include "ledger_assert.h"
-#endif
-
-uint64_t getBytesValueByLen(buffer_t *buf, uint8_t len) {
-    uint8_t *value;
-    value = (uint8_t *) (buf->ptr + buf->offset);
-    if (!buffer_seek_cur(buf, len)) {
-        return 0;
+static bool convert_bytes_to_uint64_le(const uint8_t *amount, const size_t len, uint64_t *out) {
+    if (amount == NULL || out == NULL) {
+        return false;
     }
-    return getValueByLen(value, len);
-}
 
-uint64_t getValueByLen(uint8_t *value, uint8_t len) {
-    uint64_t pre_value = 0;
-    for (int i = 0; i < len; i++) {
-        pre_value |= ((uint64_t) value[i] << (8 * i));
+    if (len > sizeof(uint64_t) || len == 0) {
+        return false;
     }
-    return pre_value;
+
+    *out = 0;
+    for (size_t i = 0; i < len; i++) {
+        *out |= ((uint64_t) amount[i] << (8 * i));
+    }
+
+    return true;
 }
 
-void script_hash_to_address(char *out, size_t out_len, const unsigned char *script_hash) {
-    static cx_sha256_t data_hash;
-    unsigned char data_hash_1[SHA256_HASH_LEN];
-    unsigned char data_hash_2[SHA256_HASH_LEN];
-    unsigned char address[ADDRESS_LEN_PRE];
-
-    address[0] = ADDRESS_VERSION;
-    memcpy(&address[1], script_hash, SCRIPT_HASH_LEN);
-
-    cx_sha256_init(&data_hash);
-    CX_ASSERT(cx_hash_no_throw(&data_hash.header,
-                               CX_LAST,
-                               address,
-                               SCRIPT_HASH_LEN + 1,
-                               data_hash_1,
-                               32));
-    cx_sha256_init(&data_hash);
-    CX_ASSERT(cx_hash_no_throw(&data_hash.header,
-                               CX_LAST,
-                               data_hash_1,
-                               SHA256_HASH_LEN,
-                               data_hash_2,
-                               32));
-
-    memcpy(&address[1 + SCRIPT_HASH_LEN], data_hash_2, SCRIPT_HASH_CHECKSUM_LEN);
-
-    base58_encode(address, sizeof(address), out, out_len);
-}
-
-void process_precision(const char *input, int precision, char *output, size_t output_len) {
+static bool process_precision(const char *input, int precision, char *output, size_t output_len) {
     // Input validation
     if (!input || !output || output_len == 0 || precision < 0) {
         if (output != NULL && output_len > 0) output[0] = '\0';
-        return;
+        return false;
     }
 
     size_t len = strlen(input);
@@ -93,14 +51,14 @@ void process_precision(const char *input, int precision, char *output, size_t ou
             strlcpy(output, "0", sizeof(output));
         else if (output_len > 0)
             output[0] = '\0';
-        return;
+        return false;
     }
 
     // Pre-check if output buffer is sufficient
     size_t max_len = len + (precision > (int) len ? precision - len + 2 : 1);
     if (max_len + 1 > output_len) {
         output[0] = '\0';
-        return;
+        return false;
     }
 
     char *ptr = output;
@@ -132,69 +90,37 @@ void process_precision(const char *input, int precision, char *output, size_t ou
         while (end > ptr + 1 && *(end - 1) == '0') *(--end) = '\0';
         if (end > output && *(end - 1) == '.') *(--end) = '\0';
     }
-}
 
-bool create_signature_redeem_script(const uint8_t *uncompressed_key, uint8_t *out, size_t out_len) {
-    if (out_len != VERIFICATION_SCRIPT_LENGTH) {
-        return false;
-    }
-    const uint8_t *x = &uncompressed_key[1];
-    const uint8_t *y = &uncompressed_key[33];
-    uint8_t compressed_key[33];
-    compressed_key[0] = (y[31] & 1) ? 0x03 : 0x02;
-    memcpy(&compressed_key[1], x, 32);
-    out[0] = 0x21;
-    memcpy(&out[1], compressed_key, sizeof(compressed_key));
-    out[34] = 0xac;
     return true;
 }
 
-void generate_address_from_public_key(const uint8_t *compressed_key,
-                                      size_t key_len,
-                                      uint8_t *output_hash) {
-    struct {
-        cx_ripemd160_t ripe;
-    } u;
-    uint8_t sha256_hash[SHA256_HASH_LEN];
-    cx_hash_sha256(compressed_key, key_len, sha256_hash, sizeof(sha256_hash));
-    cx_ripemd160_init(&u.ripe);
-    CX_ASSERT(cx_hash_no_throw(&u.ripe.header, CX_LAST, sha256_hash, 32, output_hash, 20));
-}
-
-bool ont_address_from_pubkey(char *out, size_t out_len) {
-    uint8_t uncompressed_key[65];  /// format (1), x-coordinate (32), y-coodinate (32)
-    uint8_t chain_code[32];
-    cx_err_t error = bip32_derive_get_pubkey_256(CX_CURVE_256R1,
-                                                 G_context.bip32_path,
-                                                 G_context.bip32_path_len,
-                                                 uncompressed_key,
-                                                 chain_code,
-                                                 CX_SHA256);
-
-    if (error != CX_OK) {
+static bool convert_params_to_uint128_le(tx_parameter_t *amount,
+                                         bool has_prefix,
+                                         uint64_t *low,
+                                         uint64_t *high) {
+    if (amount == NULL || low == NULL || high == NULL) {
         return false;
     }
-    return ont_address_by_pubkey(uncompressed_key, out, out_len);
-}
 
-bool ont_address_by_pubkey(const uint8_t uncompressed_key[static 65], char *out, size_t out_len) {
-    uint8_t verification_script[VERIFICATION_SCRIPT_LENGTH] = {0};
-    if (!create_signature_redeem_script(uncompressed_key,
-                                        verification_script,
-                                        sizeof verification_script)) {
+    size_t size64 = sizeof(uint64_t);
+    if (amount->len > 2 * size64 || amount->len == 0) {
         return false;
     }
-    uint8_t ripemd160_hash[UINT160_LEN] = {0};
-    generate_address_from_public_key(verification_script,
-                                     sizeof verification_script,
-                                     ripemd160_hash);
-    script_hash_to_address(out, out_len, ripemd160_hash);
-    return true;
+
+    *low = 0;
+    *high = 0;
+    size_t prefix_len = has_prefix ? 1 : 0;
+    size_t high_len = amount->len > size64 + prefix_len ? amount->len - size64 - prefix_len : 0;
+
+    return has_prefix && high_len == 0 ? convert_param_to_uint64_le(amount, low)
+               : convert_bytes_to_uint64_le(amount->data + prefix_len, size64, low) &&
+                 convert_bytes_to_uint64_le(amount->data + prefix_len + size64, high_len, high);
 }
 
-void uint128_to_decimal_string(uint64_t high, uint64_t low, char *result, size_t buffer_size) {
+
+static bool format_u128(uint64_t high, uint64_t low, char *result, size_t buffer_size) {
     if (result == NULL) {
-        return;
+        return false;
     }
 
     int index = MAX_LENGTH;
@@ -234,61 +160,69 @@ void uint128_to_decimal_string(uint64_t high, uint64_t low, char *result, size_t
 
     size_t required_length = MAX_LENGTH - index;
     if (buffer_size < required_length) {
-        return;
-    }
-
-    memcpy(result, &buffer[index], required_length);
-}
-
-bool get_token_value(uint8_t value_len,
-                     uint8_t *data,
-                     uint8_t decimals,
-                     tx_contract_type_e type,
-                     char *amount,
-                     size_t amount_len) {
-    char temp_buffer[MAX_LENGTH];
-
-    explicit_bzero(amount, amount_len);
-    explicit_bzero(temp_buffer, sizeof(temp_buffer));
-
-    if (value_len == 1) {
-        uint8_t value = *data;
-        return format_fpu64_trimmed(amount, amount_len, value - OPCODE_PUSH_NUMBER, decimals);
-    }
-
-    if (value_len > UINT128_BYTE_LEN) {
-        PRINTF("format_token_amount: Invalid value_len=%d, max=%d\n", value_len, UINT128_BYTE_LEN);
         return false;
     }
 
-    if (value_len <= UINT64_BYTE_LEN) {
-        uint64_t value = getValueByLen(data + 1, value_len);
-        return format_fpu64_trimmed(amount, amount_len, value, decimals);
-    }
-
-    uint8_t offset = (type == WASMVM_CONTRACT) ? 0 : 1;
-    uint64_t high = getValueByLen(data + offset + UINT64_BYTE_LEN, value_len - UINT64_BYTE_LEN);
-    uint64_t low = getValueByLen(data + offset, value_len - UINT64_BYTE_LEN);
-    uint128_to_decimal_string(high, low, temp_buffer, sizeof(temp_buffer));
-    process_precision(temp_buffer, decimals, amount, amount_len);
-
-    explicit_bzero(temp_buffer, sizeof(temp_buffer));
+    memcpy(result, &buffer[index], required_length);
     return true;
 }
 
-uint64_t get_data_value(uint8_t *data, uint8_t len) {
-    if (len == 1) {
-        return *data - OPCODE_PUSH_NUMBER;
+static bool format_fpu128_trimmed(char *dst,
+                                  size_t dst_len,
+                                  uint64_t low,
+                                  uint64_t high,
+                                  uint8_t decimals) {
+    if (dst == NULL) {
+        return false;
     }
-    if (len > UINT64_BYTE_LEN) {
-        return 0;
+    if (decimals > UINT128_MAX_LENGTH - 1) {
+        return false;
     }
-    if (len <= UINT64_BYTE_LEN) {
-        return getValueByLen(data + 1, len);
-    }
-    return 0;
+
+    char buffer[UINT128_MAX_LENGTH] = {0};
+
+    return format_u128(high, low, buffer, sizeof(buffer)) &&
+           process_precision(buffer, decimals, dst, dst_len);
 }
-bool get_ong_fee(uint64_t gas_price, uint64_t gas_limit) {
+
+bool convert_param_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
+    if (amount == NULL || out == NULL) {
+        return false;
+    }
+
+    if (amount->len > sizeof(uint64_t) || amount->len == 0) {
+        return false;
+    }
+
+    *out = 0;
+    uint8_t amt = amount->data[0];
+
+    if (amt > OPCODE_PUSH_NUMBER && amt <= OPCODE_PUSH_NUMBER + 16) {
+        *out = amt - OPCODE_PUSH_NUMBER;
+        return true;
+    }
+
+    return convert_bytes_to_uint64_le(amount->data + 1, amt, out);
+}
+
+bool get_token_value(tx_parameter_t *param,
+                     uint8_t decimals,
+                     bool has_prefix,
+                     char *amount,
+                     size_t amount_len) {
+    if (param == NULL || amount == 0) {
+        return false;
+    }
+
+    uint64_t high = 0;
+    uint64_t low = 0;
+
+    return (has_prefix || param->len == 2 * sizeof(uint64_t)) &&
+            convert_params_to_uint128_le(param, has_prefix, &low, &high) &&
+            format_fpu128_trimmed(amount, amount_len, low, high, decimals);
+}
+
+bool get_gas_fee(uint64_t gas_price, uint64_t gas_limit) {
     if (gas_price == 0 || gas_limit == 0 || gas_price > UINT64_MAX / gas_limit ||
         !format_fpu64_trimmed(G_context.display_data.gas_fee,
                               sizeof(G_context.display_data.gas_fee),

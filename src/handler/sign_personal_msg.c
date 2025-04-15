@@ -29,7 +29,7 @@
 #include "../personal-msg/deserialize.h"
 #include "../personal-msg/types.h"
 #include "../transaction/utils.h"
-
+#include "../address.h"
 
 #ifdef SCREEN_SIZE_WALLET
 #define SHARED_CTX_FIELD_1_SIZE 380
@@ -62,7 +62,7 @@ int handler_sign_personal_msg(buffer_t *cdata, uint8_t chunk, bool more) {
                                     (size_t) G_context.bip32_path_len)) {
             return io_send_sw(SW_WRONG_DATA_LENGTH);
         }
-        if (!ont_address_from_pubkey(G_context.display_data.signer,sizeof(G_context.display_data.signer))) {
+        if (!derive_address_from_bip32_path(G_context.display_data.signer,sizeof(G_context.display_data.signer))) {
             return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
         }
         return io_send_sw(SW_OK);

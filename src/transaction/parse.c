@@ -76,25 +76,19 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     return !stepping || buffer_seek_cur(buf, out->len);
 }
 
-uint64_t get_parse_amount(buffer_t *buf) {
+bool parse_get_amount(buffer_t *buf, uint64_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(out != NULL, "NULL out");
 
-    uint8_t amt = 0;
-    if (!buffer_read_u8(buf, &amt) || amt == 0) return false;
-    if (amt > OPCODE_PUSH_NUMBER && amt <= OPCODE_PUSH_NUMBER + 16) {
-        return amt - OPCODE_PUSH_NUMBER;
-    } else if (amt > sizeof(uint64_t)) {
-        return 0;
-    }
-    return getBytesValueByLen(buf, amt);
+    tx_parameter_t tmp;
+    return parse_amount(buf, &tmp) && convert_param_to_uint64_le(&tmp, out);
 }
 
 bool parse_check_amount(buffer_t *buf, uint64_t num) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
 
-    tx_parameter_t tmp;
     uint64_t out = 0;
-    return parse_amount(buf, &tmp) && convert_bytes_to_uint64_le(&tmp, &out) && out == num;
+    return parse_get_amount(buf, &out) && out == num;
 }
 
 bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
@@ -150,7 +144,7 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
 
     uint64_t pks_num = 0;
 
-    if (!parse_amount(buf, &pairs[0]) || !convert_bytes_to_uint64_le(&pairs[0], &pks_num) ||
+    if (!parse_amount(buf, &pairs[0]) || !convert_param_to_uint64_le(&pairs[0], &pks_num) ||
         pks_num == 0 ||
         !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
@@ -167,16 +161,19 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
         !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
         return false;
     }
+
     uint64_t amount = 0;
     for (size_t i = 1; i <= pks_num; i++) {
-        amount += get_parse_amount(buf);
-        if (i != pks_num &&
-            !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
-            return false;
-        }
+        uint64_t tmp_amount = 0;
+        if (!parse_get_amount(buf, &tmp_amount)
+            || (i != pks_num &&
+                !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
+                return false;
+            }
+        amount += tmp_amount;
     }
     format_u64(G_context.display_data.amount, sizeof(G_context.display_data.amount), amount);
-    *cur += (pks_num * 2 + 1);
+    *cur += (pks_num * 1 + 1);
     return true;
 }
 
@@ -248,29 +245,6 @@ bool parse_method_params(buffer_t *buf,
             !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
             return false;
         }
-    }
-
-    return true;
-}
-
-bool convert_bytes_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
-    LEDGER_ASSERT(amount != NULL, "NULL amount");
-    LEDGER_ASSERT(out != NULL, "NULL out");
-
-    if (amount->len > sizeof(uint64_t) || amount->len == 0) {
-        return false;
-    }
-
-    *out = 0;
-    uint8_t amt = amount->data[0];
-
-    if (amt > OPCODE_PUSH_NUMBER && amt <= OPCODE_PUSH_NUMBER + 16) {
-        *out = amt - OPCODE_PUSH_NUMBER;
-        return true;
-    }
-
-    for (size_t i = 1; i <= amount->len; i++) {
-        *out |= ((uint64_t) amount->data[i] << (8 * i - 8));
     }
 
     return true;

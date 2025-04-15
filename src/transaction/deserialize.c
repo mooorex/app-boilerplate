@@ -39,42 +39,44 @@ order to represent the payload length.
 C. tx payload code:
 Native contract
 |    Params   |Method-w-Length|Contract-w-Length|\x00 + SYSCALL|len + "Ontology.Native.Invoke"|
-|--any bytes--| --any bytes-- |  --21 byte--    |  --2 byte--  |         --23 byte--          |
+|--any bytes--| --any bytes-- |  --21 bytes--   |  --2 bytes-- |         --23 byte--          |
 
 NEOVM contract
 |    Params   | Params-Count |    0xC1  |Method-w-Length|  APPCALL | Contract-wo-Length |
-|--any bytes--| --any bytes--|--1 byte--| --any byte--  |--1 byte--|     --20 byte--    |
+|--any bytes--| --any bytes--|--1 byte--| --any bytes-- |--1 byte--|     --20 byte--    |
 
 WASM contract
-| Contract-wo-Length | Remaining-Length |Method-w-Length|    Params  |
-|    --20 bytes--    |   --any bytes--  |--any byte--   |--any byte--|
+| Contract-wo-Length | Remaining-Length |Method-w-Length|    Params   |
+|    --20 bytes--    |   --any bytes--  |--any bytes--  |--any bytes--|
 
-1. The parameters of the Native Token（ONG/ONT）'s `transfer` and `TransferV2` functions
+1. The parameters of the Native Token（ONG/ONT）'s `transfer` and `TransferV2` functions consist of
+multiple `transferstate` structures, followed by the count of `transferstate` structures and a
+single byte `opcode_pack`.
 
-consist of multiple `transferstate` structures, followed by the count of `transferstate` structures
-and a single byte `opcode_pack`. Specifically:
-`transferstate transferstate ... transferstate amount c1`
+Specifically: `transferstate transferstate ... transferstate amount c1`
 
 2. The bytecode for parameters in other functions of the Native contract is as follows:
-`00c66b param1 6a7cc8 param2 6a7cc8 param3 6a7cc8 ... 6a7cc8 6c`
+`00c66b param1 6a7cc8 param2 6a7cc8 param3 6a7cc8 ... paramn 6a7cc8 6c`
 Here, `param` could be an `addr`, an `amount`, a `transferstate`, a `pk`, a `pk_list`, a `num_list`,
 etc.
 
 3. The bytecode for each `transferstate` is as follows:
 `00c66b addr-w-length 6a7cc8 addr-w-length 6a7cc8 amount 6c`
-Here, `6a7cc8` indicates the end of each parameter.
+Here, `6a7cc8` indicates the end of each parameter. The first two address parameters represent the
+from address and to address of the transfer, and the third amount parameter represents the transfer
+amount.
 
-4. Address
-address in params in Native and Neovm contracts has a length as prefix.
-address in params in Wasm contract has NO length as prefix.
-The length of an address is 20 bytes (excluding the byte that indicates the length).
+4. Address Parameter
+The length of an address is 20 bytes. The `address` in params in Native and Neovm contracts has a
+length as prefix (0x20), while address in params in Wasm contract has NO length as prefix.
 
-5. Amount
-The amount in params in Native and Neovm contracts has an one-byte prefix.
-If the first byte of the amount is between 0x51 and 0x60, i.e., the opcode is PUSHN, it indicates
-that the value of this number is N. For example, if the first byte is 0x51, the amount is 1.
+5. Amount Parameter
+The  `amount` in params in Native and Neovm contracts has an one-byte prefix.
+If the first byte, namely the prefix, of the amount is between 0x51 and 0x60, i.e., the opcode is
+PUSHN, it indicates that the value of this number is N. For example, if the first byte is 0x51, the
+amount is 1.
 
-When the value N of the first byte of the amount is less than or equal to 8, it means the next N
+When the value N of the first byte of the amount is less than or equal to 16, it means the next N
 bytes are interpreted as a uint64_t integer in little-endian order as the value of the amount.
 
 Other cases are considered invalid bytecode.
@@ -132,7 +134,7 @@ static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction
 
     // gasLimit
     if (!buffer_read_u64(buf, &tx->header.gas_limit, LE) || tx->header.gas_limit < GAS_LIMIT_MIN ||
-        !get_ong_fee(tx->header.gas_price, tx->header.gas_limit)) {
+        !get_gas_fee(tx->header.gas_price, tx->header.gas_limit)) {
         return BYTECODE_PARSING_ERROR;
     }
 
@@ -335,7 +337,7 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
     }
 
     payload_t payload[6];
-    payload_storage_t payload_storage[6];  
+    payload_storage_t payload_storage[6];
     size_t payload_len;
     get_tx_payload(payload, &payload_len, payload_storage);
 

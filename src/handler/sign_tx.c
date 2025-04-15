@@ -31,6 +31,7 @@
 #include "tx_types.h"
 #include "../transaction/deserialize.h"
 #include "../transaction/utils.h"
+#include "../address.h"
 
 int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
     if (chunk == 0) {  // first APDU, parse BIP32 path
@@ -44,7 +45,7 @@ int handler_sign_tx(buffer_t *cdata, uint8_t chunk, bool more) {
                                     (size_t) G_context.bip32_path_len)) {
             return io_send_sw(SW_WRONG_DATA_LENGTH);
         }
-        if (!ont_address_from_pubkey(G_context.display_data.signer,
+        if (!derive_address_from_bip32_path(G_context.display_data.signer,
                                      sizeof(G_context.display_data.signer))) {
             return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
         }

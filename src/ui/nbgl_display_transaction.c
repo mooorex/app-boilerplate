@@ -116,10 +116,10 @@ static void handle_params(transaction_t *tx,
                 break;
             }
             // AMOUNT
-            get_token_value(tx->method.parameters[i + 2].len,
-                            tx->method.parameters[i + 2].data,
+    
+            get_token_value(&tx->method.parameters[i + 2],
                             tx->contract.token_decimals,
-                            tx->contract.type,
+                            tx->contract.type != WASMVM_CONTRACT,
                             g_buffers[curr],
                             MAX_BUFFER_LEN);
             if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0) {
@@ -132,13 +132,13 @@ static void handle_params(transaction_t *tx,
             (*nbPairs)++;
 
             // FROM
-            script_hash_to_address(g_buffers[curr], MAX_BUFFER_LEN, tx->method.parameters[i].data);
+            convert_script_hash_to_base58_address(g_buffers[curr], MAX_BUFFER_LEN, tx->method.parameters[i].data);
             tag_pairs[*nbPairs].item = FROM;
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
 
             // TO
-            script_hash_to_address(g_buffers[curr],
+            convert_script_hash_to_base58_address(g_buffers[curr],
                                    MAX_BUFFER_LEN,
                                    tx->method.parameters[i + 1].data);
             tag_pairs[*nbPairs].item = TO;
@@ -166,8 +166,8 @@ static void handle_params(transaction_t *tx,
                    memcmp(tx->method.name.data, METHOD_UNAUTHORIZE_FOR_PEER, tx->method.name.len) ==
                        0 ||
                    memcmp(tx->method.name.data, METHOD_WITHDRAW, tx->method.name.len) == 0) {
-            uint8_t pubkey_num =
-                get_data_value(tx->method.parameters[1].data, tx->method.parameters[1].len);
+            uint64_t pubkey_num = 0;
+            convert_param_to_uint64_le(&tx->method.parameters[1], &pubkey_num);
             size_t curr = 1;
             if (pubkey_num >= 1) {
                 parse_param_to_pair(tx,
@@ -241,7 +241,7 @@ void parse_param_to_pair(transaction_t *tx,
 
     switch (param->type) {
         case PARAM_ADDR:
-            script_hash_to_address(buffer, buffer_len, param->data);
+            convert_script_hash_to_base58_address(buffer, buffer_len, param->data);
             break;
         case PARAM_UINT128:
         case PARAM_AMOUNT: {
@@ -249,10 +249,9 @@ void parse_param_to_pair(transaction_t *tx,
             get_ont_addr(ont_addr);
             get_ong_addr(ong_addr);
             get_gov_addr(gov_addr);
-            get_token_value(param->len,
-                            param->data,
+            get_token_value(param,
                             tx->contract.token_decimals,
-                            tx->contract.type,
+                            tx->contract.type != WASMVM_CONTRACT,
                             buffer,
                             buffer_len);
             if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0)

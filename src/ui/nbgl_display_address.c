@@ -57,7 +57,7 @@ int ui_display_address() {
         }
     
         memset(g_address, 0, sizeof(g_address));
-        if (!ont_address_by_pubkey(G_context.pk_info.raw_public_key, g_address, sizeof(g_address))) {
+        if (!convert_uncompressed_pubkey_to_address(G_context.pk_info.raw_public_key, g_address, sizeof(g_address))) {
             return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
         }
         nbgl_useCaseAddressReview(g_address,
