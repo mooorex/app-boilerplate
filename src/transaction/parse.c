@@ -157,24 +157,10 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
     }
 
     for (size_t i = 1; i <= pks_num; i++) {
-#ifdef TARGET_NANOS
-        if (i == 1) {
-            if (!parse_pk(buf, &pairs[i]) ||
-                !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
-                return false;
-            }
-        } else {
-            if (!parse_skip_pk(buf) ||
-                !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
-                return false;
-            }
-        }
-#else
         if (!parse_pk(buf, &pairs[i]) ||
             !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END))) {
             return false;
         }
-#endif
     }
 
     if (!parse_check_amount(buf, pks_num) ||
@@ -189,7 +175,7 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
             return false;
         }
     }
-    format_u64(G_context.display_data.amount, sizeof(G_context.display_data.amount), amount); 
+    format_u64(G_context.display_data.amount, sizeof(G_context.display_data.amount), amount);
     *cur += (pks_num * 2 + 1);
     return true;
 }

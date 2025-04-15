@@ -31,14 +31,10 @@
 #include "../transaction/utils.h"
 
 
-#ifdef TARGET_NANOS
-#define SHARED_CTX_FIELD_1_SIZE 100
-#else
 #ifdef SCREEN_SIZE_WALLET
 #define SHARED_CTX_FIELD_1_SIZE 380
 #else
 #define SHARED_CTX_FIELD_1_SIZE 256
-#endif
 #endif
 #define SHARED_CTX_FIELD_2_SIZE 4
 

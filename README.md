@@ -4,7 +4,7 @@
 
 ## About the project
 
-Ontology wallet application framework for Stax, Flex, Nano S, Nano S Plus and Nano X.
+Ontology wallet application framework for Stax, Flex, Nano S Plus and Nano X.
 Ledger Blue is not maintained anymore, but the app can still be compiled for this target using the branch [`blue-final-release`](https://github.com/LedgerHQ/app-ont).
 
 Current Features:
@@ -84,7 +84,6 @@ make DEBUG=1  # compile optionally with PRINTF
 
 You can choose which device to compile and load for by setting the `BOLOS_SDK` environment variable to the following values :
 
-* `BOLOS_SDK=$NANOS_SDK`
 * `BOLOS_SDK=$NANOX_SDK`
 * `BOLOS_SDK=$NANOSP_SDK`
 * `BOLOS_SDK=$STAX_SDK`

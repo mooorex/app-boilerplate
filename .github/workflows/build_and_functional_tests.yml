@@ -26,6 +26,7 @@ on:
       - main
       - develop
       - ont_test
+      - ont_ledger
   pull_request:
 
 jobs:

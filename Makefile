@@ -23,9 +23,6 @@ include $(BOLOS_SDK)/Makefile.target
 
 #$(info Building for TARGET_NAME: $(TARGET_NAME))
 
-ifeq ($(TARGET_NAME),TARGET_NANOS)
-    include $(BOLOS_SDK)/Makefile.defines
-endif
 ifeq ($(filter $(TARGET_NAME),TARGET_NANOX TARGET_NANOS2),$(TARGET_NAME))
     ENABLE_NBGL_FOR_NANO_DEVICES = 1
 endif
@@ -47,7 +44,6 @@ APP_SOURCE_PATH += src
 
 # Application icons following guidelines:
 # https://developers.ledger.com/docs/embedded-app/design-requirements/#device-icon
-ICON_NANOS = icons/app_ont16px.gif
 ICON_NANOSP = icons/app_ont14px.gif
 ICON_NANOX = icons/app_ont14px.gif
 ICON_STAX = icons/app_ont32px.gif
