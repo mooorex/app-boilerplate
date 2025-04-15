@@ -41,12 +41,13 @@
 #include "../transaction/utils.h"
 
 #define MAX_BUFFER_LEN 68
-#define NUM_BUFFERS    11
+#define NUM_BUFFERS    15
 #define MAX_CONFIGS    7  // Max number of param_config_t entries per method
 #define MAX_PARAMETERS 5
+#define MAX_PAIR_LIST  15
 
 static char g_buffers[NUM_BUFFERS][MAX_BUFFER_LEN];
-static nbgl_contentTagValue_t pairs[10];
+static nbgl_contentTagValue_t pairs[MAX_PAIR_LIST];
 static nbgl_contentTagValueList_t pairList;
 
 // Configuration for parameter parsing
@@ -79,72 +80,136 @@ static void clear_buffers(void) {
 }
 
 // Unified handler function
-
 static void handle_params(transaction_t *tx,
                           nbgl_contentTagValue_t *tag_pairs,
                           uint8_t *nbPairs,
                           param_config_t *configs,
                           uint8_t config_count) {
-    for (uint8_t i = 0; i < config_count; i++) {
-        parse_param_to_pair(tx,
-                            &tag_pairs[configs[i].pos],
-                            configs[i].tag,
-                            i,
-                            g_buffers[i],
-                            MAX_BUFFER_LEN);
+    if (tx == NULL || tag_pairs == NULL || nbPairs == NULL || configs == NULL) {
+        PRINTF("Error: Null pointer in handle_params\n");
+        return;
     }
-    *nbPairs = config_count;
 
-    // Handle special cases for non-standard methods
-    if (memcmp(tx->method.name.data, METHOD_REGISTER_CANDIDATE, tx->method.name.len) == 0) {
-        tag_pairs[*nbPairs].item = STAKE_FEE;
-        tag_pairs[*nbPairs].value = STAKE_FEE_ONG;
-        (*nbPairs)++;
-    } else if (memcmp(tx->method.name.data, METHOD_AUTHORIZE_FOR_PEER, tx->method.name.len) == 0 ||
-               memcmp(tx->method.name.data, METHOD_UNAUTHORIZE_FOR_PEER, tx->method.name.len) ==
-                   0 ||
-               memcmp(tx->method.name.data, METHOD_WITHDRAW, tx->method.name.len) == 0) {
-        uint8_t pubkey_num =
-            get_data_value(tx->method.parameters[1].data, tx->method.parameters[1].len);
-        size_t curr = 1;
-        if (pubkey_num >= 1) {
-            parse_param_to_pair(tx,
-                                &tag_pairs[*nbPairs],
-                                NBGL_PEER_PUBKEY " 1",
-                                2,
-                                g_buffers[curr++],
-                                MAX_BUFFER_LEN);
+    // Handle multiple transfers of METHOD_TRANSFER
+    if (tx->contract.type == NATIVE_CONTRACT &&
+        (memcmp(tx->method.name.data, METHOD_TRANSFER, tx->method.name.len) == 0 ||
+         memcmp(tx->method.name.data, METHOD_TRANSFER_V2, tx->method.name.len) == 0)) {
+        uint8_t curr = 0;
+        uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN];
+        get_ont_addr(ont_addr);
+        get_ong_addr(ong_addr);
+        for (size_t i = 0; i < PARAMETERS_NUM; i += 3) {
+            if (tx->method.parameters[i].data == NULL ||
+                tx->method.parameters[i + 1].data == NULL ||
+                tx->method.parameters[i + 2].data == NULL) {
+                PRINTF("Error: NULL parameter at index %u\n", i);
+                break;
+            }
+            if (tx->method.parameters[i].type != PARAM_ADDR ||
+                tx->method.parameters[i + 1].type != PARAM_ADDR ||
+                tx->method.parameters[i + 2].type != PARAM_AMOUNT) {
+                PRINTF("Error: Invalid parameter type at index %u\n", i);
+                break;
+            }
+            if (curr + 3 > NUM_BUFFERS || *nbPairs + 3 > MAX_PAIR_LIST) {
+                PRINTF("Error: Buffer or pair limit reached\n");
+                break;
+            }
+            // AMOUNT
+            get_token_value(tx->method.parameters[i + 2].len,
+                            tx->method.parameters[i + 2].data,
+                            tx->contract.token_decimals,
+                            tx->contract.type,
+                            g_buffers[curr],
+                            MAX_BUFFER_LEN);
+            if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0) {
+                strlcat(g_buffers[curr], ONT_VIEW, MAX_BUFFER_LEN);
+            } else if (memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0) {
+                strlcat(g_buffers[curr], ONG_VIEW, MAX_BUFFER_LEN);
+            }
+            tag_pairs[*nbPairs].item = AMOUNT;
+            tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
-        }
-        if (pubkey_num >= 2) {
-            parse_param_to_pair(tx,
-                                &tag_pairs[*nbPairs],
-                                NBGL_PEER_PUBKEY " 2",
-                                3,
-                                g_buffers[curr++],
-                                MAX_BUFFER_LEN);
+
+            // FROM
+            script_hash_to_address(g_buffers[curr], MAX_BUFFER_LEN, tx->method.parameters[i].data);
+            tag_pairs[*nbPairs].item = FROM;
+            tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
-        }
-        if (pubkey_num >= 3) {
-            parse_param_to_pair(tx,
-                                &tag_pairs[*nbPairs],
-                                NBGL_PEER_PUBKEY " 3",
-                                4,
-                                g_buffers[curr++],
-                                MAX_BUFFER_LEN);
-            (*nbPairs)++;
-        }
-        if (pubkey_num > 1) {
-            format_u64(g_buffers[curr], MAX_BUFFER_LEN, pubkey_num);
-            tag_pairs[*nbPairs].item = NODE_AMOUNT;
+
+            // TO
+            script_hash_to_address(g_buffers[curr],
+                                   MAX_BUFFER_LEN,
+                                   tx->method.parameters[i + 1].data);
+            tag_pairs[*nbPairs].item = TO;
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
         }
-        if (memcmp(tx->method.name.data, METHOD_WITHDRAW, tx->method.name.len) == 0) {
-            strlcat(G_context.display_data.amount, ONT_VIEW, sizeof(G_context.display_data.amount));
-            tag_pairs[*nbPairs].item = TOTAL_WITHDRAW;
-            tag_pairs[*nbPairs].value = G_context.display_data.amount;
+
+    } else {
+        for (uint8_t i = 0; i < config_count; i++) {
+            parse_param_to_pair(tx,
+                                &tag_pairs[configs[i].pos],
+                                configs[i].tag,
+                                i,
+                                g_buffers[i],
+                                MAX_BUFFER_LEN);
+        }
+        *nbPairs = config_count;
+
+        if (memcmp(tx->method.name.data, METHOD_REGISTER_CANDIDATE, tx->method.name.len) == 0) {
+            tag_pairs[*nbPairs].item = STAKE_FEE;
+            tag_pairs[*nbPairs].value = STAKE_FEE_ONG;
             (*nbPairs)++;
+        } else if (memcmp(tx->method.name.data, METHOD_AUTHORIZE_FOR_PEER, tx->method.name.len) ==
+                       0 ||
+                   memcmp(tx->method.name.data, METHOD_UNAUTHORIZE_FOR_PEER, tx->method.name.len) ==
+                       0 ||
+                   memcmp(tx->method.name.data, METHOD_WITHDRAW, tx->method.name.len) == 0) {
+            uint8_t pubkey_num =
+                get_data_value(tx->method.parameters[1].data, tx->method.parameters[1].len);
+            size_t curr = 1;
+            if (pubkey_num >= 1) {
+                parse_param_to_pair(tx,
+                                    &tag_pairs[*nbPairs],
+                                    NBGL_PEER_PUBKEY " 1",
+                                    2,
+                                    g_buffers[curr++],
+                                    MAX_BUFFER_LEN);
+                (*nbPairs)++;
+            }
+            if (pubkey_num >= 2) {
+                parse_param_to_pair(tx,
+                                    &tag_pairs[*nbPairs],
+                                    NBGL_PEER_PUBKEY " 2",
+                                    3,
+                                    g_buffers[curr++],
+                                    MAX_BUFFER_LEN);
+                (*nbPairs)++;
+            }
+            if (pubkey_num >= 3) {
+                parse_param_to_pair(tx,
+                                    &tag_pairs[*nbPairs],
+                                    NBGL_PEER_PUBKEY " 3",
+                                    4,
+                                    g_buffers[curr++],
+                                    MAX_BUFFER_LEN);
+                (*nbPairs)++;
+            }
+            if (pubkey_num > 1) {
+                format_u64(g_buffers[curr], MAX_BUFFER_LEN, pubkey_num);
+                tag_pairs[*nbPairs].item = NODE_AMOUNT;
+                tag_pairs[*nbPairs].value = g_buffers[curr++];
+                (*nbPairs)++;
+            }
+            if (memcmp(tx->method.name.data, METHOD_WITHDRAW, tx->method.name.len) == 0) {
+                strlcat(G_context.display_data.amount,
+                        ONT_VIEW,
+                        sizeof(G_context.display_data.amount));
+                tag_pairs[*nbPairs].item = TOTAL_WITHDRAW;
+                tag_pairs[*nbPairs].value = G_context.display_data.amount;
+                (*nbPairs)++;
+            }
         }
     }
 }
@@ -159,7 +224,7 @@ void parse_param_to_pair(transaction_t *tx,
         PRINTF("Error: Null pointer in parse_param_to_pair\n");
         return;
     }
-    if (param_idx >= MAX_PARAMETERS) {  // Assume MAX_PARAMETERS is defined in tx_types.h
+    if (param_idx >= MAX_PARAMETERS) {
         PRINTF("Error: param_idx %u out of bounds\n", param_idx);
         return;
     }
@@ -221,7 +286,7 @@ void parse_param_to_pair(transaction_t *tx,
 
 static const method_display_t *get_method_display(const transaction_t *tx) {
     static method_display_t method;
-    static param_config_t configs[MAX_CONFIGS];  // Now static
+    static param_config_t configs[MAX_CONFIGS];
 
     if (tx == NULL) {
         PRINTF("Error: tx is NULL\n");
@@ -240,26 +305,28 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         memcmp(method_data, METHOD_TRANSFER, method_len) == 0) {
         method.title = TRANSFER_TITLE;
         method.content = TRANSFER_CONTENT;
-        if (tx->contract.type != NEOVM_CONTRACT) {
-            configs[0] = (param_config_t) {FROM, 1};
-            configs[1] = (param_config_t) {TO, 2};
-            configs[2] = (param_config_t) {AMOUNT, 0};
+        if (tx->contract.type == NATIVE_CONTRACT) {
+            method.configs = configs;
+            method.config_count = 0;
         } else {
-            configs[0] = (param_config_t) {AMOUNT, 0};
-            configs[1] = (param_config_t) {TO, 2};
-            configs[2] = (param_config_t) {FROM, 1};
+            if (tx->contract.type != NEOVM_CONTRACT) {
+                configs[0] = (param_config_t) {FROM, 1};
+                configs[1] = (param_config_t) {TO, 2};
+                configs[2] = (param_config_t) {AMOUNT, 0};
+            } else {
+                configs[0] = (param_config_t) {AMOUNT, 0};
+                configs[1] = (param_config_t) {TO, 2};
+                configs[2] = (param_config_t) {FROM, 1};
+            }
+            method.configs = configs;
+            method.config_count = 3;
         }
-        method.configs = configs;
-        method.config_count = 3;
     } else if (method_len == strlen(METHOD_TRANSFER_V2) &&
                memcmp(method_data, METHOD_TRANSFER_V2, method_len) == 0) {
         method.title = TRANSFER_TITLE;
         method.content = TRANSFER_CONTENT;
-        configs[0] = (param_config_t) {FROM, 1};
-        configs[1] = (param_config_t) {TO, 2};
-        configs[2] = (param_config_t) {AMOUNT, 0};
         method.configs = configs;
-        method.config_count = 3;
+        method.config_count = 0;
     } else if (method_len == strlen(METHOD_TRANSFER_FROM) &&
                memcmp(method_data, METHOD_TRANSFER_FROM, method_len) == 0) {
         method.title = TRANSFER_FROM_TITLE;
@@ -412,7 +479,6 @@ int ui_display_transaction(bool is_blind_signed) {
         G_context.state = STATE_NONE;
         return io_send_sw(SW_BAD_STATE);
     }
-
     clear_buffers();
     explicit_bzero(&pairList, sizeof(pairList));
     pairList.pairs = pairs;

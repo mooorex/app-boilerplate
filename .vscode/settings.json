@@ -22,7 +22,7 @@
     },
     "ledgerDevTools.appSettings": {
         "selectedUseCase": "debug",
-        "selectedDevice": "Stax",
+        "selectedDevice": "Nano X",
         "selectedVariant": "BOL",
         "testsList": [
             "test_sign_add_init_pos_tx_short_tx",
@@ -33,6 +33,8 @@
             "test_sign_change_max_authorization_tx_refused",
             "test_sign_withdraw_fee_tx_short_tx",
             "test_sign_withdraw_fee_tx_refused",
+            "test_multi_transfer_sign_tx_short_tx",
+            "test_multi_transfer_sign_tx_short_tx_refused",
             "test_get_app_and_version",
             "test_sign_oep4_neo_vm_approve_tx_short_tx",
             "test_sign_oep4_neo_vm_approve_tx_refused",

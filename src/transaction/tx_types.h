@@ -3,6 +3,8 @@
 #include <stddef.h>  // size_t
 #include <stdint.h>  // uint*_t
 
+#define PARAMETERS_NUM 20
+
 enum {
     ADDRESS_LEN = 20,
     PK_LEN = 66,
@@ -86,7 +88,7 @@ typedef struct {
 
 typedef struct {
     tx_parameter_t name;
-    tx_parameter_t parameters[9];
+    tx_parameter_t parameters[PARAMETERS_NUM];
 } tx_method_t;
 
 typedef struct {
