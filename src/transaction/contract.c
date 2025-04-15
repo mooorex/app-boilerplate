@@ -1,6 +1,5 @@
 #include <string.h>
 #include "contract.h"
-// 为 payload 分配独立的 contract_addr 和 methods 存储
 
 void get_native_token_methods(tx_method_signature_t *methods, size_t *count) {
     static const tx_parameter_type_e transfer_params[] = {PARAM_TRANSFER_STATE_LIST, PARAM_END};

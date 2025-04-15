@@ -17,7 +17,7 @@ enum {
 
 enum {
     HEADER_LENGTH = 42,
-    NATIVE_CONTRACT_CONSTANT_LENGTH = 47, 
+    NATIVE_CONTRACT_CONSTANT_LENGTH = 47,
     NEOVM_CONTRACT_CONSTANT_LENGTH = 22,
 };
 
@@ -33,9 +33,8 @@ static const uint8_t OPCODE_ST_BEGIN[] = {0x00, 0xc6, 0x6b};
 static const uint8_t OPCODE_ST_END[] = {0x6c};
 static const uint8_t OPCODE_PARAM_END[] = {0x6a, 0x7c, 0xc8};
 static const uint8_t OPCODE_PARAM_ST_END[] = {0x6a, 0x7c, 0xc8, 0x6c};
-static const uint8_t NATIVE_INVOKE[] = {0x16, 'O', 'n', 't', 'o', 'l', 'o', 'g',
-                                         'y',  '.', 'N', 'a', 't', 'i', 'v', 'e',
-                                         '.',  'I', 'n', 'v', 'o', 'k', 'e'};
+static const uint8_t NATIVE_INVOKE[] = {0x16, 'O', 'n', 't', 'o', 'l', 'o', 'g', 'y', '.', 'N', 'a',
+                                        't',  'i', 'v', 'e', '.', 'I', 'n', 'v', 'o', 'k', 'e'};
 
 typedef enum {
     PARSING_OK = 1,
@@ -44,7 +43,6 @@ typedef enum {
     PARSING_TX_NOT_DEFINED = -4,
     PERSONAL_MESSAGE_PARSING_ERROR = -6
 } parser_status_e;
-
 
 typedef enum {
     NATIVE_CONTRACT,
@@ -86,26 +84,6 @@ typedef struct {
     uint8_t token_decimals;
 } tx_contract_t;
 
-// typedef struct {
-//     char from[34];
-//     char to[34];
-//     char value[39];
-// } tx_transfer_state_t;
-
-// typedef struct {
-//     tx_transfer_state_t transfer[50];
-// } tx_transfer_parameters_t;
-
-// typedef struct {
-//     char sender[34];
-//     tx_transfer_state_t transfer;
-// } tx_transfer_from_parameters_t;
-
-// typedef union {
-//     tx_transfer_parameters_t transfer;
-//     tx_transfer_from_parameters_t transfer_from;
-// } tx_parameters_t;
-
 typedef struct {
     tx_parameter_t name;
     tx_parameter_t parameters[9];
@@ -115,5 +93,5 @@ typedef struct {
     transaction_header_t header;
     tx_contract_t contract;
     tx_method_t method;
-//    tx_parameters_t params;
+    //    tx_parameters_t params;
 } transaction_t;

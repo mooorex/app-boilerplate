@@ -25,6 +25,7 @@
 #include "globals.h"
 #include "menu.h"
 #include "display.h"
+#include "types.h"
 
 //  -----------------------------------------------------------
 //  ----------------------- HOME PAGE -------------------------
@@ -43,8 +44,8 @@ static const char* const INFO_TYPES[SETTING_INFO_NB] = {"Version", "Developer"};
 static const char* const INFO_CONTENTS[SETTING_INFO_NB] = {APPVERSION, "Ledger"};
 
 // settings switches definitions
-enum { DUMMY_SWITCH_1_TOKEN = FIRST_USER_TOKEN};
-enum { DUMMY_SWITCH_1_ID = 0,SETTINGS_SWITCHES_NB };
+enum { DUMMY_SWITCH_1_TOKEN = FIRST_USER_TOKEN };
+enum { DUMMY_SWITCH_1_ID = 0, SETTINGS_SWITCHES_NB };
 
 static nbgl_contentSwitch_t switches[SETTINGS_SWITCHES_NB] = {0};
 
@@ -89,10 +90,10 @@ static void controls_callback(int token, uint8_t index, int page) {
 void ui_menu_main(void) {
     // Initialize switches data
     switches[DUMMY_SWITCH_1_ID].initState = (nbgl_state_t) N_storage.blind_signed_allowed;
-    switches[DUMMY_SWITCH_1_ID].text = "Blind signing";
-    switches[DUMMY_SWITCH_1_ID].subText = "Enables transaction or msg blind signing";
+    switches[DUMMY_SWITCH_1_ID].text = BLIND_SIGNING_SWITCH_TEXT;
+    switches[DUMMY_SWITCH_1_ID].subText = BLIND_SIGNING_SWITCH_SUBTEXT;
     switches[DUMMY_SWITCH_1_ID].token = DUMMY_SWITCH_1_TOKEN;
-    //switches[DUMMY_SWITCH_1_ID].tuneId = TUNE_TAP_CASUAL;
+    // switches[DUMMY_SWITCH_1_ID].tuneId = TUNE_TAP_CASUAL;
 
     nbgl_useCaseHomeAndSettings(APPNAME,
                                 &ICON_APP_BOILERPLATE,
@@ -102,7 +103,6 @@ void ui_menu_main(void) {
                                 &infoList,
                                 NULL,
                                 app_quit);
-                                
 }
 
 #endif

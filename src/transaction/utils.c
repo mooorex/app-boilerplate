@@ -241,11 +241,11 @@ void uint128_to_decimal_string(uint64_t high, uint64_t low, char *result, size_t
 }
 
 bool get_token_value(uint8_t value_len,
-                         uint8_t *data,
-                         uint8_t decimals,
-                         tx_contract_type_e type,
-                         char *amount,
-                         size_t amount_len) {
+                     uint8_t *data,
+                     uint8_t decimals,
+                     tx_contract_type_e type,
+                     char *amount,
+                     size_t amount_len) {
     char temp_buffer[MAX_LENGTH];
 
     explicit_bzero(amount, amount_len);
@@ -276,8 +276,7 @@ bool get_token_value(uint8_t value_len,
     return true;
 }
 
-
-uint64_t get_data_value(uint8_t *data,uint8_t len){
+uint64_t get_data_value(uint8_t *data, uint8_t len) {
     if (len == 1) {
         return *data - OPCODE_PUSH_NUMBER;
     }
@@ -286,7 +285,7 @@ uint64_t get_data_value(uint8_t *data,uint8_t len){
     }
     if (len <= UINT64_BYTE_LEN) {
         return getValueByLen(data + 1, len);
-    } 
+    }
     return 0;
 }
 bool get_ong_fee(uint64_t gas_price, uint64_t gas_limit) {
@@ -298,6 +297,6 @@ bool get_ong_fee(uint64_t gas_price, uint64_t gas_limit) {
         return false;
     }
     strlcat(G_context.display_data.gas_fee, ONG_VIEW, sizeof(G_context.display_data.gas_fee));
-    
+
     return true;
 }

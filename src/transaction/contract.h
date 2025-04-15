@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tx_types.h" // 假设包含 tx_parameter_type_e 等类型定义
+#include "tx_types.h"
 
 #define ADDRESS_LEN 20
 
@@ -22,7 +22,6 @@
 #define METHOD_WITHDRAW "withdraw"
 #define METHOD_WITHDRAW_FEE "withdrawFee"
 
-// 结构体定义
 typedef struct {
     const char *name;
     const tx_parameter_type_e *parameters;
@@ -35,12 +34,11 @@ typedef struct {
 } payload_t;
 
 typedef struct {
-    uint8_t contract_addr[ADDRESS_LEN]; // 每个 payload 有自己的地址存储
+    uint8_t contract_addr[ADDRESS_LEN];
     uint8_t token_decimals;
-    tx_method_signature_t methods[11]; // 最大方法数（native_governance 有 11 个）
+    tx_method_signature_t methods[11];
 } payload_storage_t;
 
-// 地址生成函数
 static inline void get_ont_addr(uint8_t *addr) {
     const uint8_t ont[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
@@ -77,7 +75,6 @@ static inline void get_myt_addr(uint8_t *addr) {
     memcpy(addr, myt, ADDRESS_LEN);
 }
 
-// 方法签名和 txPayload 生成函数原型
 void get_native_token_methods(tx_method_signature_t *methods, size_t *count);
 void get_neovm_oep4_token_methods(tx_method_signature_t *methods, size_t *count);
 void get_wasmvm_oep4_token_methods(tx_method_signature_t *methods, size_t *count);
