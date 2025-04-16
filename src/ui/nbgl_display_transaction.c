@@ -113,7 +113,7 @@ static void handle_params(transaction_t *tx,
                 break;
             }
             // AMOUNT
-    
+
             get_token_value(&tx->method.parameters[i + 2],
                             tx->contract.token_decimals,
                             tx->contract.type != WASMVM_CONTRACT,
@@ -126,15 +126,17 @@ static void handle_params(transaction_t *tx,
             (*nbPairs)++;
 
             // FROM
-            convert_script_hash_to_base58_address(g_buffers[curr], MAX_BUFFER_LEN, tx->method.parameters[i].data);
+            convert_script_hash_to_base58_address(g_buffers[curr],
+                                                  MAX_BUFFER_LEN,
+                                                  tx->method.parameters[i].data);
             tag_pairs[*nbPairs].item = FROM;
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
 
             // TO
             convert_script_hash_to_base58_address(g_buffers[curr],
-                                   MAX_BUFFER_LEN,
-                                   tx->method.parameters[i + 1].data);
+                                                  MAX_BUFFER_LEN,
+                                                  tx->method.parameters[i + 1].data);
             tag_pairs[*nbPairs].item = TO;
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
@@ -244,18 +246,12 @@ void parse_param_to_pair(transaction_t *tx,
                             tx->contract.type != WASMVM_CONTRACT,
                             buffer,
                             buffer_len);
-            if (memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0)
-                strlcat(buffer, ONT_VIEW, buffer_len);
-            else if (memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0)
-                strlcat(buffer, ONG_VIEW, buffer_len);
-            else if (memcmp(tx->contract.addr.data, GOV_ADDR, ADDRESS_LEN) == 0) {
-                if (tx->method.name.len == strlen(METHOD_SET_FEE_PERCENTAGE) &&
-                    memcmp(tx->method.name.data, METHOD_SET_FEE_PERCENTAGE, tx->method.name.len) ==
-                        0) {
-                    strlcat(buffer, PERCENTAGE, buffer_len);
-                } else {
-                    strlcat(buffer, ONT_VIEW, buffer_len);
-                }
+            if (tx->method.name.len == strlen(METHOD_SET_FEE_PERCENTAGE) &&
+                memcmp(tx->method.name.data, METHOD_SET_FEE_PERCENTAGE, tx->method.name.len) == 0) {
+                strlcat(buffer, PERCENTAGE, buffer_len);
+            } else {
+                strlcat(buffer, " ", buffer_len);
+                strlcat(buffer, tx->contract.ticker, buffer_len);
             }
             break;
         }

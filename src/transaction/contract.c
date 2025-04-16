@@ -143,7 +143,7 @@ void get_tx_payload(payload_t *storage, size_t *count) {
 
     memcpy(storage[3].contract_addr, WING_ADDR, ADDRESS_LEN);
     storage[3].token_decimals = 9;
-    storage[3].ticker = "";
+    storage[3].ticker = "WING";
     get_neovm_oep4_token_methods((tx_method_signature_t *) storage[3].methods);
 
     memcpy(storage[4].contract_addr, WTK_ADDR, ADDRESS_LEN);
