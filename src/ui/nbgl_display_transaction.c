@@ -46,8 +46,8 @@
 #define NUM_BUFFERS    155
 #define MAX_PAIR_LIST  155
 #elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-#define NUM_BUFFERS    90
-#define MAX_PAIR_LIST  90
+#define NUM_BUFFERS    95
+#define MAX_PAIR_LIST  95
 #else
 #warning "No target device defined"
 #endif
