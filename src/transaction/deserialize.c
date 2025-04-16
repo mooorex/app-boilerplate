@@ -302,11 +302,8 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
     }
 
     if (tx->contract.type == NATIVE_CONTRACT) {
-        uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN];
-        get_ont_addr(ont_addr);
-        get_ong_addr(ong_addr);
-        bool is_ont = memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0;
-        bool is_ong = memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0;
+        bool is_ont = memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
+        bool is_ong = memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
         if (is_ont || is_ong) {
             bool is_transfer =
                 (tx->method.name.len == strlen(METHOD_TRANSFER) &&
@@ -325,6 +322,9 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
             if (is_transfer_v2 || is_transfer_from_v2 || is_approve_v2) {
                 tx->contract.token_decimals += 9;
             }
+            // todo: optimize this
+            strlcpy(tx->contract.ticker, is_ont ? "ONT" : "ONG", MAX_TICKER_LEN);
+
             if (is_transfer || is_transfer_v2) {
                 return native_transfer_deserialize_params(buf, tx);
             }
@@ -337,13 +337,13 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
     }
 
     payload_t payload[6];
-    payload_storage_t payload_storage[6];
     size_t payload_len;
-    get_tx_payload(payload, &payload_len, payload_storage);
+    get_tx_payload(payload, &payload_len);
 
     size_t params_num = 0;
     for (size_t i = 0; i < payload_len; i++) {
         if (memcmp(tx->contract.addr.data, payload[i].contract_addr, ADDRESS_LEN) == 0) {
+            strlcpy(tx->contract.ticker, payload[i].ticker, MAX_TICKER_LEN);
             if (tx->contract.type != NATIVE_CONTRACT) {
                 tx->contract.token_decimals = payload[i].token_decimals;
             }

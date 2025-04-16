@@ -1,7 +1,8 @@
 #include <string.h>
 #include "contract.h"
+#include "../ui/types.h"
 
-void get_native_token_methods(tx_method_signature_t *methods, size_t *count) {
+void get_native_token_methods(tx_method_signature_t *methods) {
     static const tx_parameter_type_e transfer_params[] = {PARAM_TRANSFER_STATE_LIST, PARAM_END};
     static const tx_parameter_type_e transfer_from_params[] = {PARAM_ADDR,
                                                                PARAM_TRANSFER_STATE,
@@ -24,10 +25,9 @@ void get_native_token_methods(tx_method_signature_t *methods, size_t *count) {
     methods[5].name = METHOD_APPROVE_V2;
     methods[5].parameters = approve_params;
     methods[6].name = NULL;
-    *count = 7;
 }
 
-void get_neovm_oep4_token_methods(tx_method_signature_t *methods, size_t *count) {
+void get_neovm_oep4_token_methods(tx_method_signature_t *methods) {
     static const tx_parameter_type_e transfer_params[] = {PARAM_AMOUNT,
                                                           PARAM_ADDR,
                                                           PARAM_ADDR,
@@ -49,10 +49,9 @@ void get_neovm_oep4_token_methods(tx_method_signature_t *methods, size_t *count)
     methods[2].name = METHOD_APPROVE;
     methods[2].parameters = approve_params;
     methods[3].name = NULL;
-    *count = 4;
 }
 
-void get_wasmvm_oep4_token_methods(tx_method_signature_t *methods, size_t *count) {
+void get_wasmvm_oep4_token_methods(tx_method_signature_t *methods) {
     static const tx_parameter_type_e transfer_params[] = {PARAM_ADDR,
                                                           PARAM_ADDR,
                                                           PARAM_UINT128,
@@ -74,10 +73,9 @@ void get_wasmvm_oep4_token_methods(tx_method_signature_t *methods, size_t *count
     methods[2].name = METHOD_APPROVE;
     methods[2].parameters = approve_params;
     methods[3].name = NULL;
-    *count = 4;
 }
 
-void get_native_governance_methods(tx_method_signature_t *methods, size_t *count) {
+void get_native_governance_methods(tx_method_signature_t *methods) {
     static const tx_parameter_type_e register_params[] =
         {PARAM_PUBKEY, PARAM_ADDR, PARAM_AMOUNT, PARAM_ONTID, PARAM_AMOUNT, PARAM_END};
     static const tx_parameter_type_e quit_params[] = {PARAM_PUBKEY, PARAM_ADDR, PARAM_END};
@@ -125,46 +123,44 @@ void get_native_governance_methods(tx_method_signature_t *methods, size_t *count
     methods[9].name = METHOD_WITHDRAW_FEE;
     methods[9].parameters = withdraw_fee_params;
     methods[10].name = NULL;
-    *count = 11;
 }
 
-void get_tx_payload(payload_t *payload, size_t *count, payload_storage_t *storage) {
-    size_t method_count;
+void get_tx_payload(payload_t *storage, size_t *count) {
+    memcpy(storage[0].contract_addr, ONT_ADDR, ADDRESS_LEN);
+    storage[0].token_decimals = 0;
+    storage[0].ticker = "ONT";
+    get_native_token_methods((tx_method_signature_t *) storage[0].methods);
 
-    get_ont_addr(storage[0].contract_addr);
-    payload[0].contract_addr = storage[0].contract_addr;
-    payload[0].token_decimals = 0;
-    payload[0].methods = storage[0].methods;
-    get_native_token_methods((tx_method_signature_t *) payload[0].methods, &method_count);
+    memcpy(storage[1].contract_addr, ONG_ADDR, ADDRESS_LEN);
+    storage[1].token_decimals = 9;
+    storage[1].ticker = "ONG";  //it's the gas token
+    get_native_token_methods((tx_method_signature_t *) storage[1].methods);
 
-    get_ong_addr(storage[1].contract_addr);
-    payload[1].contract_addr = storage[1].contract_addr;
-    payload[1].token_decimals = 9;
-    payload[1].methods = storage[1].methods;
-    get_native_token_methods((tx_method_signature_t *) payload[1].methods, &method_count);
+    memcpy(storage[2].contract_addr, GOV_ADDR, ADDRESS_LEN);
+    storage[2].token_decimals = 0;
+    storage[2].ticker = "ONT";  //not the token ticker, it's the token operated by the contract
+    get_native_governance_methods((tx_method_signature_t *) storage[2].methods);
 
-    get_gov_addr(storage[2].contract_addr);
-    payload[2].contract_addr = storage[2].contract_addr;
-    payload[2].token_decimals = 0;
-    payload[2].methods = storage[2].methods;
-    get_native_governance_methods((tx_method_signature_t *) payload[2].methods, &method_count);
+    memcpy(storage[3].contract_addr, WING_ADDR, ADDRESS_LEN);
+    storage[3].token_decimals = 9;
+    storage[3].ticker = "";
+    get_neovm_oep4_token_methods((tx_method_signature_t *) storage[3].methods);
 
-    get_wing_addr(storage[3].contract_addr);
-    payload[3].contract_addr = storage[3].contract_addr;
-    payload[3].token_decimals = 9;
-    payload[3].methods = storage[3].methods;
-    get_neovm_oep4_token_methods((tx_method_signature_t *) payload[3].methods, &method_count);
+    memcpy(storage[4].contract_addr, WTK_ADDR, ADDRESS_LEN);
+    storage[4].token_decimals = 9;
+    storage[4].ticker = "";
+    get_wasmvm_oep4_token_methods((tx_method_signature_t *) storage[4].methods);
 
-    get_wtk_addr(storage[4].contract_addr);
-    payload[4].contract_addr = storage[4].contract_addr;
-    payload[4].token_decimals = 9;
-    payload[4].methods = storage[4].methods;
-    get_wasmvm_oep4_token_methods((tx_method_signature_t *) payload[4].methods, &method_count);
-
-    get_myt_addr(storage[5].contract_addr);
-    payload[5].contract_addr = storage[5].contract_addr;
-    payload[5].token_decimals = 18;
-    payload[5].methods = storage[5].methods;
-    get_neovm_oep4_token_methods((tx_method_signature_t *) payload[5].methods, &method_count);
+    memcpy(storage[5].contract_addr, MYT_ADDR, ADDRESS_LEN);
+    storage[5].token_decimals = 18;
+    storage[5].ticker = "";
+    get_neovm_oep4_token_methods((tx_method_signature_t *) storage[5].methods);
     *count = 6;
 }
+
+
+
+
+
+
+

@@ -77,7 +77,7 @@ static void controls_callback(int token, uint8_t index, int page) {
 
     uint8_t switch_value;
     if (token == BLIND_SIGNNING_SWITCH_TOKEN) {
-        // Dummy 1 switch touched
+        // Blind signing switch touched
         // toggle the switch value
         switch_value = !N_storage.blind_signed_allowed;
         switches[BLIND_SIGNNING_SWITCH_ID].initState = (nbgl_state_t) switch_value;

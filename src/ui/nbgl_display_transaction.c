@@ -95,9 +95,6 @@ static void handle_params(transaction_t *tx,
         (memcmp(tx->method.name.data, METHOD_TRANSFER, tx->method.name.len) == 0 ||
          memcmp(tx->method.name.data, METHOD_TRANSFER_V2, tx->method.name.len) == 0)) {
         uint8_t curr = 0;
-        uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN];
-        get_ont_addr(ont_addr);
-        get_ong_addr(ong_addr);
         for (size_t i = 0; i < PARAMETERS_NUM; i += 3) {
             if (tx->method.parameters[i].data == NULL ||
                 tx->method.parameters[i + 1].data == NULL ||
@@ -122,11 +119,8 @@ static void handle_params(transaction_t *tx,
                             tx->contract.type != WASMVM_CONTRACT,
                             g_buffers[curr],
                             MAX_BUFFER_LEN);
-            if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0) {
-                strlcat(g_buffers[curr], ONT_VIEW, MAX_BUFFER_LEN);
-            } else if (memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0) {
-                strlcat(g_buffers[curr], ONG_VIEW, MAX_BUFFER_LEN);
-            }
+            strlcat(g_buffers[curr], " ", MAX_BUFFER_LEN);
+            strlcat(g_buffers[curr], tx->contract.ticker, MAX_BUFFER_LEN);
             tag_pairs[*nbPairs].item = AMOUNT;
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
@@ -245,20 +239,16 @@ void parse_param_to_pair(transaction_t *tx,
             break;
         case PARAM_UINT128:
         case PARAM_AMOUNT: {
-            uint8_t ont_addr[ADDRESS_LEN], ong_addr[ADDRESS_LEN], gov_addr[ADDRESS_LEN];
-            get_ont_addr(ont_addr);
-            get_ong_addr(ong_addr);
-            get_gov_addr(gov_addr);
             get_token_value(param,
                             tx->contract.token_decimals,
                             tx->contract.type != WASMVM_CONTRACT,
                             buffer,
                             buffer_len);
-            if (memcmp(tx->contract.addr.data, ont_addr, ADDRESS_LEN) == 0)
+            if (memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0)
                 strlcat(buffer, ONT_VIEW, buffer_len);
-            else if (memcmp(tx->contract.addr.data, ong_addr, ADDRESS_LEN) == 0)
+            else if (memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0)
                 strlcat(buffer, ONG_VIEW, buffer_len);
-            else if (memcmp(tx->contract.addr.data, gov_addr, ADDRESS_LEN) == 0) {
+            else if (memcmp(tx->contract.addr.data, GOV_ADDR, ADDRESS_LEN) == 0) {
                 if (tx->method.name.len == strlen(METHOD_SET_FEE_PERCENTAGE) &&
                     memcmp(tx->method.name.data, METHOD_SET_FEE_PERCENTAGE, tx->method.name.len) ==
                         0) {
