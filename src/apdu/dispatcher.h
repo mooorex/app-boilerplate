@@ -18,7 +18,7 @@
 /**
  * Parameter 1 for maximum APDU number.
  */
-#define P1_MAX 0x04
+#define P1_MAX 0x19
 
 /**
  * Dispatch APDU command received to the right handler.

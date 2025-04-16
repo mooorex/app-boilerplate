@@ -40,11 +40,19 @@
 #include "../transaction/contract.h"
 #include "../transaction/utils.h"
 
+
 #define MAX_BUFFER_LEN 68
-#define NUM_BUFFERS    15
+#if defined(TARGET_STAX) || defined(TARGET_FLEX)
+#define NUM_BUFFERS    155
+#define MAX_PAIR_LIST  155
+#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
+#define NUM_BUFFERS    90
+#define MAX_PAIR_LIST  90
+#else
+#warning "No target device defined"
+#endif
 #define MAX_CONFIGS    7  // Max number of param_config_t entries per method
 #define MAX_PARAMETERS 5
-#define MAX_PAIR_LIST  15
 
 static char g_buffers[NUM_BUFFERS][MAX_BUFFER_LEN];
 static nbgl_contentTagValue_t pairs[MAX_PAIR_LIST];
@@ -74,7 +82,7 @@ void parse_param_to_pair(transaction_t *tx,
 
 // Static functions
 static void clear_buffers(void) {
-    for (uint8_t i = 0; i < NUM_BUFFERS; i++) {
+    for (uint16_t i = 0; i < NUM_BUFFERS; i++) {
         explicit_bzero(g_buffers[i], MAX_BUFFER_LEN);
     }
 }

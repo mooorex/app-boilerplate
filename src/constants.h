@@ -23,7 +23,13 @@
 /**
  * Maximum transaction length (bytes).
  */
-#define MAX_TRANSACTION_LEN 1024
+#if defined(TARGET_STAX) || defined(TARGET_FLEX)
+#define MAX_TRANSACTION_LEN 1024 * 6
+#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
+#define MAX_TRANSACTION_LEN 1024 * 4
+#else
+#error "No target device defined (TARGET_STAX, TARGET_FLEX, TARGET_NANOX, TARGET_NANOS2)"
+#endif
 /**
  * Maximum personal message length (bytes).
  */
@@ -32,4 +38,3 @@
  * Maximum signature length (bytes).
  */
 #define MAX_DER_SIG_LEN 72
-

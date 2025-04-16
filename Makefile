@@ -22,6 +22,7 @@ endif
 include $(BOLOS_SDK)/Makefile.target
 
 #$(info Building for TARGET_NAME: $(TARGET_NAME))
+DEFINES += $(TARGET_NAME)
 
 ifeq ($(filter $(TARGET_NAME),TARGET_NANOX TARGET_NANOS2),$(TARGET_NAME))
     ENABLE_NBGL_FOR_NANO_DEVICES = 1

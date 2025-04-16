@@ -3,7 +3,14 @@
 #include <stddef.h>  // size_t
 #include <stdint.h>  // uint*_t
 
-#define PARAMETERS_NUM 20
+#if defined(TARGET_STAX) || defined(TARGET_FLEX)
+#define PARAMETERS_NUM 150
+#elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
+#define PARAMETERS_NUM 90
+#else
+#error "No target device defined (TARGET_STAX, TARGET_FLEX, TARGET_NANOX, TARGET_NANOS2)"
+#endif
+
 #define MAX_TICKER_LEN 8
 
 enum {
