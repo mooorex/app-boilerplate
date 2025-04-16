@@ -4,12 +4,16 @@
 
 ## About the project
 
-Ontology wallet application framework for Stax, Flex, Nano S Plus and Nano X.
-Ledger Blue is not maintained anymore, but the app can still be compiled for this target using the branch [`blue-final-release`](https://github.com/LedgerHQ/app-ont).
+The Ontology wallet application is supported on Ledger Stax, Flex, Nano S Plus, and Nano X devices.
+The Ledger Blue is no longer maintained, but the application can still be compiled for this target using the [`blue-final-release` branch](https://github.com/LedgerHQ/app-ont).
 
-Current Features:
-- Parse, display and sign ont/ong transaction and oep4 transaction
-- Sign Personal Message
+### Current Features
+
+The Ontology wallet application supports the following features:
+
+- Parsing, displaying, and signing Ontology (ONT), ONG, and OEP-4 transactions.
+
+- Signing personal messages.
 
 ## Quick start guide
 
@@ -19,18 +23,18 @@ You can quickly setup a convenient environment to build and test your applicatio
 
 It will allow you, whether you are developing on macOS, Windows or Linux to quickly **build** your apps, **test** them on **Speculos** and **load** them on any supported device.
 
-* Install and run [Docker](https://www.docker.com/products/docker-desktop/).
-* Make sure you have an X11 server running :
-    * On Ubuntu Linux, it should be running by default.
-    * On macOS, install and launch [XQuartz](https://www.xquartz.org/) (make sure to go to XQuartz > Preferences > Security and check "Allow client connections").
-    * On Windows, install and launch [VcXsrv](https://sourceforge.net/projects/vcxsrv/) (make sure to configure it to disable access control).
-* Install [VScode](https://code.visualstudio.com/download) and add [Ledger's extension](https://marketplace.visualstudio.com/items?itemName=LedgerHQ.ledger-dev-tools).
-* Open a terminal and clone `app-ont` with `git clone git@github.com:LedgerHQ/app-ont.git`.
-* Open the `app-ont` folder with VSCode.
-* Use Ledger extension's sidebar menu or open the tasks menu with `ctrl + shift + b` (`command + shift + b` on a Mac) to conveniently execute actions :
-    * Build the app for the device model of your choice with `Build`.
-    * Test your binary on [Speculos](https://github.com/LedgerHQ/speculos) with `Run with Speculos`.
-    * You can also run functional tests, load the app on a physical device, and more.
+- Install and run [Docker](https://www.docker.com/products/docker-desktop/).
+- Make sure you have an X11 server running :
+  - On Ubuntu Linux, it should be running by default.
+  - On macOS, install and launch [XQuartz](https://www.xquartz.org/) (make sure to go to XQuartz > Preferences > Security and check "Allow client connections").
+  - On Windows, install and launch [VcXsrv](https://sourceforge.net/projects/vcxsrv/) (make sure to configure it to disable access control).
+- Install [VScode](https://code.visualstudio.com/download) and add [Ledger's extension](https://marketplace.visualstudio.com/items?itemName=LedgerHQ.ledger-dev-tools).
+- Open a terminal and clone `app-ont` with `git clone git@github.com:LedgerHQ/app-ont.git`.
+- Open the `app-ont` folder with VSCode.
+- Use Ledger extension's sidebar menu or open the tasks menu with `ctrl + shift + b` (`command + shift + b` on a Mac) to conveniently execute actions :
+  - Build the app for the device model of your choice with `Build`.
+  - Test your binary on [Speculos](https://github.com/LedgerHQ/speculos) with `Run with Speculos`.
+  - You can also run functional tests, load the app on a physical device, and more.
 
 :information_source: The terminal tab of VSCode will show you what commands the extension runs behind the scene.
 
@@ -84,9 +88,10 @@ make DEBUG=1  # compile optionally with PRINTF
 
 You can choose which device to compile and load for by setting the `BOLOS_SDK` environment variable to the following values :
 
-* `BOLOS_SDK=$NANOX_SDK`
-* `BOLOS_SDK=$NANOSP_SDK`
-* `BOLOS_SDK=$STAX_SDK`
+- `BOLOS_SDK=$NANOX_SDK`
+- `BOLOS_SDK=$NANOSP_SDK`
+- `BOLOS_SDK=$STAX_SDK`
+- `BOLOS_SDK=$$FLEX_SDK`
 
 By default this variable is set to build/load for Nano S+.
 
@@ -131,8 +136,8 @@ python3 -m virtualenv ledger
 
 Enter the Python virtual environment
 
-* macOS : `source ledger/bin/activate`
-* Windows : `.\ledger\Scripts\Activate.ps1`
+- macOS : `source ledger/bin/activate`
+- Windows : `.\ledger\Scripts\Activate.ps1`
 
 ```shell
 # Install Ledgerblue (tool to load the app)
@@ -143,7 +148,7 @@ python3 -m ledgerblue.runScript --scp --fileName bin/app.apdu --elfFile bin/app.
 
 ## Test
 
-The Ont app comes with functional tests implemented with Ledger's [Ragger](https://github.com/LedgerHQ/ragger) test framework.
+The Ontology application includes functional tests implemented using Ledger's [Ragger](https://github.com/LedgerHQ/ragger) test framework.
 
 ### macOS / Windows
 
@@ -151,16 +156,16 @@ To test your app on macOS or Windows, it is recommended to use [Ledger's VS Code
 
 You can use the following sequence of tasks and commands (all accessible in the **extension sidebar menu**) :
 
-* `Select build target`
-* `Build app`
+- `Select build target`
+- `Build app`
 
 Then you can choose to execute the functional tests :
 
-* Use `Run tests`.
+- Use `Run tests`.
 
 Or simply run the app on the Speculos emulator :
 
-* `Run with Speculos`.
+- `Run with Speculos`.
 
 ### Linux (Ubuntu)
 
@@ -188,7 +193,7 @@ speculos --model nanosp build/nanos2/bin/app.elf
 
 ## Documentation
 
-High level documentation such as [application specification](https://github.com/LedgerHQ/app-ont/doc/APP_SPECIFICATION.md), [APDU](doc/APDU.md) and [transaction serialization](doc/TRANSACTION.md) are included in developer documentation which can be generated with [doxygen](https://www.doxygen.nl)
+High level documentation such as [application specification](https://github.com/LedgerHQ/app-ont/doc/APP_SPECIFICATION.md), [APDU](doc/APDU.md) are included in developer documentation which can be generated with [doxygen](https://www.doxygen.nl)
 
 ```shell
 doxygen .doxygen/Doxyfile
@@ -209,6 +214,7 @@ The flow processed in [GitHub Actions](https://github.com/features/actions) is t
 - Documentation generation with [doxygen](https://www.doxygen.nl)
 
 It outputs 3 artifacts:
+
 - `compiled_app_binaries` within binary files of the build process for each device
 - `code-coverage` within HTML details of code coverage
 - `documentation` within HTML auto-generated documentation
