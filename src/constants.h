@@ -24,7 +24,7 @@
  * Maximum transaction length (bytes).
  */
 #if defined(TARGET_STAX) || defined(TARGET_FLEX)
-#define MAX_TRANSACTION_LEN 1024 * 6
+#define MAX_TRANSACTION_LEN 1024 * 6 + 700
 #elif defined(TARGET_NANOX) || defined(TARGET_NANOS2)
 #define MAX_TRANSACTION_LEN 1024 * 4
 #else

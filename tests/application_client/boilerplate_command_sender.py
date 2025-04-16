@@ -14,7 +14,7 @@ class P1(IntEnum):
     # Parameter 1 for first APDU number.
     P1_START = 0x00
     # Parameter 1 for maximum APDU number.
-    P1_MAX   = 0x19
+    P1_MAX   = 0x1B
     # Parameter 1 for screen confirmation for GET_PUBLIC_KEY.
     P1_CONFIRM = 0x01
 
@@ -47,11 +47,8 @@ class Errors(IntEnum):
     SW_BAD_STATE               = 0xB007
     SW_SIGNATURE_FAIL          = 0xB008
     SW_PERSONAL_MSG_PARSING_FAIL = 0xB009
-    SW_PERSONAl_MSG_HASH_FAIL    = 0xB00A
-    SW_WRONG_PERSONAL_MSG_LENGTH = 0xB00B
-    SW_TX_PAYLOAD_PARSING_FAIL = 0xB00C
-    SW_OEP4_TX_PARSING_FAIL    = 0xB00D
-    SW_OEP4_TX_PAYLOAD_PARSING_FAIL = 0xB00E
+    SW_WRONG_PERSONAL_MSG_LENGTH = 0xB00A
+    SW_INVALID_TRANSACTION     = 0xB00B
 
 
 def split_message(message: bytes, max_size: int) -> List[bytes]:
