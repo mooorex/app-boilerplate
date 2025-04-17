@@ -47,12 +47,12 @@ def test_sign_personal_msg_short_msg(backend, scenario_navigator):
         # Validate the on-screen request by performing the navigation appropriate for this device
         scenario_navigator.review_approve()
 
-    personalmsg = SIGN_MAGIC + str(len(str_personal_msg)).encode() + personalmsg
+    personalmsg = SIGN_MAGIC + str(len(personalmsg)).encode() + personalmsg
     # The device as yielded the result, parse it and ensure that the signature is correct
     response = client.get_async_response().data
     _, der_sig, _ = unpack_sign_personal_msg_response(response)
     logger.debug("sig:%s", der_sig.hex())
-    logger.debug("msg len:%d", len(str_personal_msg))
+    logger.debug("msg len:%d", len(str_personal_msg.encode('utf-8')))
     logger.debug("personalmsg len:%d", len(personalmsg))
     logger.debug("pubkey:%s,der_sig:%s,personalmsg:%s", public_key.hex(), der_sig.hex(), personalmsg.hex())
     assert checkpersonal_signature_validity(public_key, der_sig, personalmsg)
@@ -76,7 +76,7 @@ def test_sign_personal_msg_long_msg(backend, scenario_navigator):
     with client.sign_personal_msg(path=path, personalmsg=personalmsg):
         scenario_navigator.review_approve()
 
-    personalmsg = SIGN_MAGIC + str(len(str_personal_msg)).encode() + personalmsg
+    personalmsg = SIGN_MAGIC + str(len(personalmsg)).encode() + personalmsg
 
     response = client.get_async_response().data
     _, der_sig, _ = unpack_sign_personal_msg_response(response)

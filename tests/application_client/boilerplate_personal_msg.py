@@ -11,7 +11,7 @@ class PersonalMsgError(Exception):
 class PersonalMsg:
     def __init__(self,
                  personalmsg: str) -> None:
-        self.personalmsg: bytes = personalmsg.encode("ascii")
+        self.personalmsg: bytes = personalmsg.encode('utf-8')
 
 
     def serialize(self) -> bytes:
@@ -24,5 +24,5 @@ class PersonalMsg:
         buf: BytesIO = BytesIO(hexa) if isinstance(hexa, bytes) else hexa
 
 
-        personalmsg: str = read(buf).decode("ascii")
+        personalmsg: str = read(buf).decode('utf-8')
         return cls(personalmsg=personalmsg)
