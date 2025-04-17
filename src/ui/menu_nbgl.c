@@ -96,7 +96,7 @@ void ui_menu_main(void) {
     // switches[BLIND_SIGNNING_SWITCH_ID].tuneId = TUNE_TAP_CASUAL;
 
     nbgl_useCaseHomeAndSettings(APPNAME,
-                                &ICON_APP_BOILERPLATE,
+                                &ICON_APP_ONTOLOGY,
                                 NULL,
                                 INIT_HOME_PAGE,
                                 &settingContents,

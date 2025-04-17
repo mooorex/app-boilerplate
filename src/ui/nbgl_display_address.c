@@ -62,7 +62,7 @@ int ui_display_address() {
         }
         nbgl_useCaseAddressReview(g_address,
                                   NULL,
-                                  &ICON_APP_BOILERPLATE,
+                                  &ICON_APP_ONTOLOGY,
                                   VERIFY_ONT_ADDRESS,
                                   NULL,
                                   review_choice);

@@ -117,7 +117,7 @@ static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction
         return BYTECODE_PARSING_ERROR;
     }
 
-    // tx_type
+    // tx_type, check later if it's valid or not
     if (!buffer_read_u8(buf, &tx->header.tx_type)) {
         return BYTECODE_PARSING_ERROR;
     }
@@ -134,7 +134,7 @@ static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction
 
     // gasLimit
     if (!buffer_read_u64(buf, &tx->header.gas_limit, LE) || tx->header.gas_limit < GAS_LIMIT_MIN ||
-        !get_gas_fee(tx->header.gas_price, tx->header.gas_limit)) {
+        tx->header.gas_limit > UINT64_MAX / tx->header.gas_price) {
         return BYTECODE_PARSING_ERROR;
     }
 
@@ -292,31 +292,14 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
-    if (tx->contract.addr.data == NULL) {
-        PRINTF("Error: tx->contract.addr.data is NULL\n");
-        return BYTECODE_PARSING_ERROR;
-    }
-    if (tx->method.name.data == NULL) {
-        PRINTF("Error: tx->method.name.data is NULL\n");
-        return BYTECODE_PARSING_ERROR;
-    }
-
     if (tx->contract.type == NATIVE_CONTRACT) {
         bool is_ont = memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
         bool is_ong = memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
         if (is_ont || is_ong) {
-            bool is_transfer =
-                (tx->method.name.len == strlen(METHOD_TRANSFER) &&
-                 memcmp(tx->method.name.data, METHOD_TRANSFER, tx->method.name.len) == 0);
-            bool is_transfer_v2 =
-                (tx->method.name.len == strlen(METHOD_TRANSFER_V2) &&
-                 memcmp(tx->method.name.data, METHOD_TRANSFER_V2, tx->method.name.len) == 0);
-            bool is_transfer_from_v2 =
-                (tx->method.name.len == strlen(METHOD_TRANSFER_FROM_V2) &&
-                 memcmp(tx->method.name.data, METHOD_TRANSFER_FROM_V2, tx->method.name.len) == 0);
-            bool is_approve_v2 =
-                (tx->method.name.len == strlen(METHOD_APPROVE_V2) &&
-                 memcmp(tx->method.name.data, METHOD_APPROVE_V2, tx->method.name.len) == 0);
+            bool is_transfer = is_specific_method(&tx->method.name, METHOD_TRANSFER);
+            bool is_transfer_v2 = is_specific_method(&tx->method.name, METHOD_TRANSFER_V2);
+            bool is_transfer_from_v2 = is_specific_method(&tx->method.name, METHOD_TRANSFER_FROM_V2);
+            bool is_approve_v2 = is_specific_method(&tx->method.name, METHOD_APPROVE_V2);
 
             tx->contract.token_decimals = is_ont ? 0 : 9;
             if (is_transfer_v2 || is_transfer_from_v2 || is_approve_v2) {
@@ -349,8 +332,7 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
             }
             const tx_method_signature_t *methods = payload[i].methods;
             while (methods->name != NULL) {
-                if (tx->method.name.len == strlen(methods->name) &&
-                    memcmp(methods->name, tx->method.name.data, tx->method.name.len) == 0) {
+                if (is_specific_method(&tx->method.name, methods->name)) {
                     if (!parse_method_params(buf, tx, methods->parameters, &params_num)) {
                         PRINTF("Error: parse_method_params failed\n");
                         return BYTECODE_PARSING_ERROR;

@@ -73,7 +73,6 @@ typedef struct {
 typedef struct {
     char signer[40];
     char amount[40];
-    char gas_fee[20];
 }display_data_t;
 /**
  * Structure for global context.

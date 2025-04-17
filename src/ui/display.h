@@ -4,13 +4,13 @@
 #include "../transaction/tx_types.h"
 
 #if defined(TARGET_NANOX) || defined(TARGET_NANOS2)
-#define ICON_APP_BOILERPLATE C_app_ont14px
+#define ICON_APP_ONTOLOGY    C_app_ont14px
 #define ICON_APP_WARNING     C_icon_warning
 #elif defined(TARGET_STAX)
-#define ICON_APP_BOILERPLATE C_app_ont32px
+#define ICON_APP_ONTOLOGY    C_app_ont32px
 #define ICON_APP_WARNING     C_Warning_64px
 #elif defined(TARGET_FLEX)
-#define ICON_APP_BOILERPLATE C_app_ont40px
+#define ICON_APP_ONTOLOGY    C_app_ont40px
 #define ICON_APP_WARNING     C_Warning_64px
 #endif
 

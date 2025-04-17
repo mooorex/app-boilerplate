@@ -115,7 +115,7 @@ display:
 
     nbgl_useCaseReview(TYPE_MESSAGE,
                        &pairList,
-                       &ICON_APP_BOILERPLATE,
+                       &ICON_APP_ONTOLOGY,
                        PERSONAL_MSG_TITLE,
                        NULL,
                        PERSONAL_MSG_CONTENT,
