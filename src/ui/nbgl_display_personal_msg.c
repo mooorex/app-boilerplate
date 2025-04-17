@@ -18,7 +18,8 @@
 #ifdef HAVE_NBGL
 
 #include <stdbool.h>  // bool
-#include <string.h>   // memset
+#include <ctype.h>
+#include <string.h>  // memset
 
 #include "os.h"
 #include "glyphs.h"
@@ -62,12 +63,48 @@ int ui_display_personal_msg_choice() {
     explicit_bzero(pairs, sizeof(pairs));
     explicit_bzero(g_msg, sizeof(g_msg));
 
-    const size_t maxCopyLen = sizeof(g_msg) - 1;
+    const size_t max_copy_len = sizeof(g_msg) - 1;
+    const size_t msg_len = G_context.personal_msg_info.raw_msg_len;
+    const uint8_t *msg = G_context.personal_msg_info.msg_info.personal_msg;
+    size_t g_msg_pos = 0;
+    size_t msg_pos = 0;
 
-    const size_t copyLen = MIN(G_context.personal_msg_info.raw_msg_len, maxCopyLen);
-    memcpy(g_msg, G_context.personal_msg_info.msg_info.personal_msg, copyLen);
+    if (msg == NULL || msg_len == 0) {
+        snprintf(g_msg, sizeof(g_msg), "Invalid message");
+        goto display;
+    }
 
-    g_msg[copyLen] = '\0';
+    if (msg_len > MAX_PERSONAL_MSG_LEN) {
+        snprintf(g_msg, sizeof(g_msg), "Message too long");
+        goto display;
+    }
+
+    while (msg_pos < msg_len && g_msg_pos < max_copy_len) {
+        int c = msg[msg_pos];
+        if (isspace(c)) {
+            c = ' ';
+        }
+        if (isprint(c)) {
+            g_msg[g_msg_pos] = (char) c;
+            g_msg_pos += 1;
+            msg_pos += 1;
+        } else {
+            if (g_msg_pos + 4 <= max_copy_len) {
+                static const char hex[] = "0123456789abcdef";
+                g_msg[g_msg_pos + 0] = '\\';
+                g_msg[g_msg_pos + 1] = 'x';
+                g_msg[g_msg_pos + 2] = hex[(c >> 4) & 0xF];
+                g_msg[g_msg_pos + 3] = hex[c & 0xF];
+                g_msg_pos += 4;
+                msg_pos += 1;
+            } else {
+                break;
+            }
+        }
+    }
+    g_msg[g_msg_pos] = '\0';
+
+display:
 
     pairs[0].item = NBGL_MSG;
     pairs[0].value = g_msg;
