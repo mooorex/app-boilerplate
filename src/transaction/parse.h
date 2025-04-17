@@ -24,3 +24,4 @@ bool parse_skip_pk(buffer_t *buf);
 bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pk_list, size_t *cur);
 bool parse_trasfer_state(buffer_t *buf, tx_parameter_t *transfer_state, size_t *cur);
 bool parse_ont_id(buffer_t *buf);
+

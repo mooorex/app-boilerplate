@@ -137,8 +137,8 @@ void get_tx_payload(payload_t *storage, size_t *count) {
     get_native_token_methods((tx_method_signature_t *) storage[1].methods);
 
     memcpy(storage[2].contract_addr, GOV_ADDR, ADDRESS_LEN);
-    storage[2].token_decimals = 0;
-    storage[2].ticker = "ONT";  //not the token ticker, it's the token operated by the contract
+    storage[2].token_decimals = 0;  //not the token decimals, it's the one of the token operated by the contract
+    storage[2].ticker = "ONT";      //not the token ticker, it's the one of the token operated by the contract
     get_native_governance_methods((tx_method_signature_t *) storage[2].methods);
 
     memcpy(storage[3].contract_addr, WING_ADDR, ADDRESS_LEN);

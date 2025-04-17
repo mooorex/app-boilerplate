@@ -206,7 +206,7 @@ bool convert_param_to_uint64_le(tx_parameter_t *amount, uint64_t *out) {
     return convert_bytes_to_uint64_le(amount->data + 1, amt, out);
 }
 
-bool get_token_value(tx_parameter_t *param,
+bool convert_param_amount_to_chars(tx_parameter_t *param,
                      uint8_t decimals,
                      bool has_prefix,
                      char *amount,
@@ -221,17 +221,4 @@ bool get_token_value(tx_parameter_t *param,
     return (has_prefix || param->len == 2 * sizeof(uint64_t)) &&
             convert_params_to_uint128_le(param, has_prefix, &low, &high) &&
             format_fpu128_trimmed(amount, amount_len, low, high, decimals);
-}
-
-bool get_gas_fee(uint64_t gas_price, uint64_t gas_limit) {
-    if (gas_price == 0 || gas_limit == 0 || gas_price > UINT64_MAX / gas_limit ||
-        !format_fpu64_trimmed(G_context.display_data.gas_fee,
-                              sizeof(G_context.display_data.gas_fee),
-                              gas_price * gas_limit,
-                              9)) {
-        return false;
-    }
-    strlcat(G_context.display_data.gas_fee, ONG_VIEW, sizeof(G_context.display_data.gas_fee));
-
-    return true;
 }
