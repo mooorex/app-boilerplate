@@ -57,7 +57,6 @@ static char g_buffers[NUM_BUFFERS][MAX_BUFFER_LEN];
 static nbgl_contentTagValue_t pairs[MAX_PAIR_LIST];
 static nbgl_contentTagValueList_t pairList;
 static char gas_fee[20];
-static char signer[40];
 
 // Configuration for parameter parsing
 typedef struct {
@@ -165,6 +164,16 @@ static bool handle_params(transaction_t *tx,
         uint8_t state_num = 1;
         while (tx->method.parameters[3 * state_num].data != NULL) {
             for (uint8_t i = 0; i < 3; i++) {
+                if (i + 3 * state_num >= PARAMETERS_NUM) {
+                    return true;
+                }
+                parse_param_to_pair(tx,
+                                    i + 3 * state_num,
+                                    &tag_pairs[configs[i].pos + 3 * state_num],
+                                    configs[i].item,
+
+                                    g_buffers[i + 3 * state_num],
+                                    MAX_BUFFER_LEN);
                 parse_param_to_pair(tx,
                                     i + 3 * state_num,
                                     &tag_pairs[configs[i].pos + 3 * state_num],
@@ -452,7 +461,7 @@ static int ui_display_normal_transaction() {
                               G_context.tx_info.transaction.header.gas_price *
                                   G_context.tx_info.transaction.header.gas_limit,
                               9)) {
-        return io_send_sw(SW_DISPLAY_AMOUNT_FAIL); 
+        return io_send_sw(SW_DISPLAY_AMOUNT_FAIL);
     }
     strlcat(gas_fee, ONG_VIEW, sizeof(gas_fee));
 
@@ -460,11 +469,8 @@ static int ui_display_normal_transaction() {
     pairs[pairList.nbPairs].value = gas_fee;
     pairList.nbPairs++;
 
-    if (!derive_address_from_bip32_path(signer, sizeof(signer))) {
-        return io_send_sw(SW_DISPLAY_ADDRESS_FAIL);
-    }
     pairs[pairList.nbPairs].item = SIGNER;
-    pairs[pairList.nbPairs].value = signer;
+    pairs[pairList.nbPairs].value = G_context.display_data.signer;
     pairList.nbPairs++;
 
     nbgl_useCaseReview(TYPE_TRANSACTION,
