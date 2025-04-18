@@ -108,13 +108,14 @@ static bool handle_params(transaction_t *tx,
     }
     *nbPairs = config_count;
 
-    if (is_specific_method(&tx->method.name, METHOD_REGISTER_CANDIDATE)) {
+    if (methodcmp(&tx->method.name, METHOD_REGISTER_CANDIDATE)) {
         tag_pairs[*nbPairs].item = STAKE_FEE;
         tag_pairs[*nbPairs].value = STAKE_FEE_ONG;
         (*nbPairs)++;
-    } else if (is_specific_method(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER) ||
-               is_specific_method(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER) ||
-               is_specific_method(&tx->method.name, METHOD_WITHDRAW)) {
+    } 
+    if (methodcmp(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER) ||
+               methodcmp(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER) ||
+               methodcmp(&tx->method.name, METHOD_WITHDRAW)) {
         uint64_t pubkey_num = 0;
         if (!convert_param_to_uint64_le(&tx->method.parameters[1], &pubkey_num) ||
             pubkey_num == 0) {
@@ -151,31 +152,38 @@ static bool handle_params(transaction_t *tx,
             tag_pairs[*nbPairs].value = g_buffers[curr++];
             (*nbPairs)++;
         }
-        if (is_specific_method(&tx->method.name, METHOD_WITHDRAW)) {
+        if (methodcmp(&tx->method.name, METHOD_WITHDRAW)) {
             tag_pairs[*nbPairs].item = TOTAL_WITHDRAW;
-        } else if (is_specific_method(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER)) {
+        } else if (methodcmp(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER)) {
             tag_pairs[*nbPairs].item = POS;
-        } else if (is_specific_method(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER)) {
+        } else if (methodcmp(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER)) {
             tag_pairs[*nbPairs].item = AMOUNT;
         }
+
+        uint64_t amount = 0;
+        for (size_t i = 0; i < pubkey_num; i++) {
+            uint64_t tmp_amount = 0;
+            if (!convert_param_to_uint64_le(&tx->method.parameters[i+2+pubkey_num], &tmp_amount)) {
+                return false;
+            }
+            amount += tmp_amount;
+        }
+        format_u64(G_context.display_data.amount, sizeof(G_context.display_data.amount), amount);
+
         strlcat(G_context.display_data.amount, ONT_VIEW, sizeof(G_context.display_data.amount));
         tag_pairs[*nbPairs].value = G_context.display_data.amount;
         (*nbPairs)++;
     }
     if (tx->contract.type == NATIVE_CONTRACT &&
-        (is_specific_method(&tx->method.name, METHOD_TRANSFER) ||
-         is_specific_method(&tx->method.name, METHOD_TRANSFER_V2))) {
+        (methodcmp(&tx->method.name, METHOD_TRANSFER) ||
+         methodcmp(&tx->method.name, METHOD_TRANSFER_V2))) {
         uint8_t state_num = 1;
-        while (tx->method.parameters[3 * state_num].data != NULL) {
+        while (tx->method.parameters[3 * state_num].data != NULL && 3*state_num < PARAMETERS_NUM) {
             for (uint8_t i = 0; i < 3; i++) {
-                if (i + 3 * state_num >= PARAMETERS_NUM) {
-                    return true;
-                }
                 parse_param_to_pair(tx,
                                     i + 3 * state_num,
                                     &tag_pairs[configs[i].pos + 3 * state_num],
                                     configs[i].item,
-
                                     g_buffers[i + 3 * state_num],
                                     MAX_BUFFER_LEN);
             }
@@ -222,7 +230,7 @@ void parse_param_to_pair(transaction_t *tx,
                                           tx->contract.type != WASMVM_CONTRACT,
                                           buffer,
                                           buffer_len);
-            if (is_specific_method(&tx->method.name, METHOD_SET_FEE_PERCENTAGE)) {
+            if (methodcmp(&tx->method.name, METHOD_SET_FEE_PERCENTAGE)) {
                 strlcat(buffer, PERCENTAGE, buffer_len);
             } else {
                 strlcat(buffer, " ", buffer_len);
@@ -261,7 +269,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         return NULL;
     }
 
-    if (is_specific_method(&tx->method.name, METHOD_TRANSFER)) {
+    if (methodcmp(&tx->method.name, METHOD_TRANSFER)) {
         method.title = TRANSFER_TITLE;
         method.finish_title = TRANSFER_CONTENT;
         if (tx->contract.type != NEOVM_CONTRACT) {
@@ -275,7 +283,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         }
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_TRANSFER_V2)) {
+    } else if (methodcmp(&tx->method.name, METHOD_TRANSFER_V2)) {
         method.title = TRANSFER_TITLE;
         method.finish_title = TRANSFER_CONTENT;
         configs[0] = (param_config_t) {FROM, 1};
@@ -283,7 +291,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[2] = (param_config_t) {AMOUNT, 0};
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_TRANSFER_FROM)) {
+    } else if (methodcmp(&tx->method.name, METHOD_TRANSFER_FROM)) {
         method.title = TRANSFER_FROM_TITLE;
         method.finish_title = TRANSFER_FROM_CONTENT;
         if (tx->contract.type != NEOVM_CONTRACT) {
@@ -299,7 +307,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         }
         method.configs = configs;
         method.config_count = 4;
-    } else if (is_specific_method(&tx->method.name, METHOD_TRANSFER_FROM_V2)) {
+    } else if (methodcmp(&tx->method.name, METHOD_TRANSFER_FROM_V2)) {
         method.title = TRANSFER_FROM_TITLE;
         method.finish_title = TRANSFER_FROM_CONTENT;
         configs[0] = (param_config_t) {SENDER, 1};
@@ -308,7 +316,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[3] = (param_config_t) {AMOUNT, 0};
         method.configs = configs;
         method.config_count = 4;
-    } else if (is_specific_method(&tx->method.name, METHOD_APPROVE)) {
+    } else if (methodcmp(&tx->method.name, METHOD_APPROVE)) {
         method.title = APPROVE_TITLE;
         method.finish_title = APPROVE_CONTENT;
         if (tx->contract.type != NEOVM_CONTRACT) {
@@ -322,7 +330,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         }
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_APPROVE_V2)) {
+    } else if (methodcmp(&tx->method.name, METHOD_APPROVE_V2)) {
         method.title = APPROVE_TITLE;
         method.finish_title = APPROVE_CONTENT;
         configs[0] = (param_config_t) {FROM, 0};
@@ -330,21 +338,21 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[2] = (param_config_t) {AMOUNT, 2};
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_REGISTER_CANDIDATE)) {
+    } else if (methodcmp(&tx->method.name, METHOD_REGISTER_CANDIDATE)) {
         method.title = REGISTER_CANDIDATE_TITLE;
         method.finish_title = REGISTER_CANDIDATE_CONTENT;
         configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
         configs[1] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 2;
-    } else if (is_specific_method(&tx->method.name, METHOD_QUIT_NODE)) {
+    } else if (methodcmp(&tx->method.name, METHOD_QUIT_NODE)) {
         method.title = QUIT_NODE_TITLE;
         method.finish_title = QUIT_NODE_CONTENT;
         configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
         configs[1] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 2;
-    } else if (is_specific_method(&tx->method.name, METHOD_ADD_INIT_POS)) {
+    } else if (methodcmp(&tx->method.name, METHOD_ADD_INIT_POS)) {
         method.title = ADD_INIT_POS_TITLE;
         method.finish_title = ADD_INIT_POS_CONTENT;
         configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
@@ -352,7 +360,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[2] = (param_config_t) {POS, 2};
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_REDUCE_INIT_POS)) {
+    } else if (methodcmp(&tx->method.name, METHOD_REDUCE_INIT_POS)) {
         method.title = REDUCE_INIT_POS_TITLE;
         method.finish_title = REDUCE_INIT_POS_CONTENT;
         configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
@@ -360,7 +368,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[2] = (param_config_t) {AMOUNT, 2};
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_CHANGE_MAX_AUTH)) {
+    } else if (methodcmp(&tx->method.name, METHOD_CHANGE_MAX_AUTH)) {
         method.title = CHANGE_MAX_AUTHORIZATION_TITLE;
         method.finish_title = CHANGE_MAX_AUTHORIZATION_CONTENT;
         configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
@@ -368,7 +376,7 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[2] = (param_config_t) {MAX_AUTHORIZE, 2};
         method.configs = configs;
         method.config_count = 3;
-    } else if (is_specific_method(&tx->method.name, METHOD_SET_FEE_PERCENTAGE)) {
+    } else if (methodcmp(&tx->method.name, METHOD_SET_FEE_PERCENTAGE)) {
         method.title = SET_FEE_PERCENTAGE_TITLE;
         method.finish_title = SET_FEE_PERCENTAGE_CONTENT;
         configs[0] = (param_config_t) {NBGL_PEER_PUBKEY, 1};
@@ -377,25 +385,25 @@ static const method_display_t *get_method_display(const transaction_t *tx) {
         configs[3] = (param_config_t) {STAKE_COST, 3};
         method.configs = configs;
         method.config_count = 4;
-    } else if (is_specific_method(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER)) {
+    } else if (methodcmp(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER)) {
         method.title = AUTHORIZE_FOR_PEER_TITLE;
         method.finish_title = AUTHORIZE_FOR_PEER_CONTENT;
         configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
-    } else if (is_specific_method(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER)) {
+    } else if (methodcmp(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER)) {
         method.title = UN_AUTHORIZE_FOR_PEER_TITLE;
         method.finish_title = UN_AUTHORIZE_FOR_PEER_CONTENT;
         configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
-    } else if (is_specific_method(&tx->method.name, METHOD_WITHDRAW)) {
+    } else if (methodcmp(&tx->method.name, METHOD_WITHDRAW)) {
         method.title = WITHDRAW_TITLE;
         method.finish_title = WITHDRAW_CONTENT;
         configs[0] = (param_config_t) {ADDRESS, 0};
         method.configs = configs;
         method.config_count = 1;
-    } else if (is_specific_method(&tx->method.name, METHOD_WITHDRAW_FEE)) {
+    } else if (methodcmp(&tx->method.name, METHOD_WITHDRAW_FEE)) {
         method.title = WITHDRAW_FEE_TITLE;
         method.finish_title = WITHDRAW_FEE_CONTENT;
         configs[0] = (param_config_t) {ADDRESS, 0};

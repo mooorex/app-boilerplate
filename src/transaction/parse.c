@@ -1,12 +1,24 @@
-#include "parse.h"
-#include "tx_types.h"
-#include "utils.h"
-#include "types.h"
-#include "string.h"
+/*******************************************************************************
+ *   Ontology Ledger App
+ *   (c) 2025 OGD
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ********************************************************************************/
+
 #include "macros.h"
-#include "contract.h"
-#include "globals.h"
-#include "format.h"
+
+#include "parse.h"
+#include "utils.h"
 
 #if defined(TEST) || defined(FUZZ)
 #include "assert.h"
@@ -15,47 +27,7 @@
 #include "ledger_assert.h"
 #endif
 
-bool parse_check_constant(buffer_t *buf, const uint8_t *str, size_t len) {
-    LEDGER_ASSERT(buf != NULL, "NULL buf");
-    LEDGER_ASSERT(str != NULL, "NULL str");
-    LEDGER_ASSERT(len > 0, "len is 0");
-
-    return buffer_can_read(buf, len) && memcmp(buf->ptr + buf->offset, str, len) == 0 &&
-           buffer_seek_cur(buf, len);
-}
-
-bool parse_method(buffer_t *buf, tx_parameter_t *out) {
-    LEDGER_ASSERT(buf != NULL, "NULL buf");
-    LEDGER_ASSERT(out != NULL, "NULL out");
-
-    uint8_t size = 0;
-    if (!buffer_read_u8(buf, &size) || size == 0 || !buffer_can_read(buf, size)) {
-        return false;
-    }
-
-    out->len = size;
-    out->data = (uint8_t *) (buf->ptr + buf->offset);
-    return buffer_seek_cur(buf, size);
-}
-bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *out) {
-    LEDGER_ASSERT(buf != NULL, "NULL buf");
-    LEDGER_ASSERT(out != NULL, "NULL out");
-
-    size_t prefix_len = has_length ? 1 : 0;
-    uint8_t size = 0;
-
-    if (!buffer_can_read(buf, ADDRESS_LEN + prefix_len) ||
-        (has_length && (!buffer_read_u8(buf, &size) || size != ADDRESS_LEN))) {
-        return false;
-    }
-
-    out->len = ADDRESS_LEN;
-    out->data = (uint8_t *) (buf->ptr + buf->offset);
-    out->type = PARAM_ADDR;
-    return buffer_seek_cur(buf, ADDRESS_LEN);
-}
-
-bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
+static bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
@@ -76,7 +48,7 @@ bool parse_amount(buffer_t *buf, tx_parameter_t *out) {
     return !stepping || buffer_seek_cur(buf, out->len);
 }
 
-bool parse_get_amount(buffer_t *buf, uint64_t *out) {
+static bool parse_get_amount(buffer_t *buf, uint64_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
@@ -84,14 +56,8 @@ bool parse_get_amount(buffer_t *buf, uint64_t *out) {
     return parse_amount(buf, &tmp) && convert_param_to_uint64_le(&tmp, out);
 }
 
-bool parse_check_amount(buffer_t *buf, uint64_t num) {
-    LEDGER_ASSERT(buf != NULL, "NULL buf");
 
-    uint64_t out = 0;
-    return parse_get_amount(buf, &out) && out == num;
-}
-
-bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
+static bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
@@ -104,7 +70,7 @@ bool parse_uint128(buffer_t *buf, tx_parameter_t *out) {
     return buffer_seek_cur(buf, size);
 }
 
-bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
+static bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(out != NULL, "NULL out");
 
@@ -119,25 +85,14 @@ bool parse_pk(buffer_t *buf, tx_parameter_t *out) {
     return buffer_seek_cur(buf, size);
 }
 
-bool parse_skip_pk(buffer_t *buf) {
-    LEDGER_ASSERT(buf != NULL, "NULL buf");
-
-    uint8_t size = 0;
-    if (!buffer_read_u8(buf, &size) || size != PK_LEN || !buffer_can_read(buf, PK_LEN)) {
-        return false;
-    }
-
-    return buffer_seek_cur(buf, size);
-}
-
-bool parse_ont_id(buffer_t *buf) {
+static bool parse_ont_id(buffer_t *buf) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
 
     uint8_t size = 0;
     return buffer_read_u8(buf, &size) && size != 0 && buffer_seek_cur(buf, size);
 }
 
-bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
+static bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(pairs != NULL, "NULL pairs");
     LEDGER_ASSERT(cur != NULL, "NULL cur");
@@ -162,19 +117,64 @@ bool parse_pk_amount_pairs(buffer_t *buf, tx_parameter_t *pairs, size_t *cur) {
         return false;
     }
 
-    uint64_t amount = 0;
     for (size_t i = 1; i <= pks_num; i++) {
-        uint64_t tmp_amount = 0;
-        if (!parse_get_amount(buf, &tmp_amount)
-            || (i != pks_num &&
-                !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
-                return false;
-            }
-        amount += tmp_amount;
+        if (!parse_amount(buf, &pairs[pks_num + i]) ||
+            (i != pks_num &&
+             !parse_check_constant(buf, OPCODE_PARAM_END, ARRAY_LENGTH(OPCODE_PARAM_END)))) {
+            return false;
+        }
     }
-    format_u64(G_context.display_data.amount, sizeof(G_context.display_data.amount), amount);
-    *cur += (pks_num * 1 + 1);
+
+    *cur += (pks_num * 2 + 1);
     return true;
+}
+
+bool parse_check_constant(buffer_t *buf, const uint8_t *str, size_t len) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(str != NULL, "NULL str");
+    LEDGER_ASSERT(len > 0, "len is 0");
+
+    return buffer_can_read(buf, len) && memcmp(buf->ptr + buf->offset, str, len) == 0 &&
+           buffer_seek_cur(buf, len);
+}
+
+bool parse_address(buffer_t *buf, bool has_length, tx_parameter_t *out) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(out != NULL, "NULL out");
+
+    size_t prefix_len = has_length ? 1 : 0;
+    uint8_t size = 0;
+
+    if (!buffer_can_read(buf, ADDRESS_LEN + prefix_len) ||
+        (has_length && (!buffer_read_u8(buf, &size) || size != ADDRESS_LEN))) {
+        return false;
+    }
+
+    out->len = ADDRESS_LEN;
+    out->data = (uint8_t *) (buf->ptr + buf->offset);
+    out->type = PARAM_ADDR;
+    return buffer_seek_cur(buf, ADDRESS_LEN);
+}
+
+bool parse_check_amount(buffer_t *buf, uint64_t num) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+
+    uint64_t out = 0;
+    return parse_get_amount(buf, &out) && out == num;
+}
+
+bool parse_method_name(buffer_t *buf, tx_parameter_t *out) {
+    LEDGER_ASSERT(buf != NULL, "NULL buf");
+    LEDGER_ASSERT(out != NULL, "NULL out");
+
+    uint8_t size = 0;
+    if (!buffer_read_u8(buf, &size) || size == 0 || !buffer_can_read(buf, size)) {
+        return false;
+    }
+
+    out->len = size;
+    out->data = (uint8_t *) (buf->ptr + buf->offset);
+    return buffer_seek_cur(buf, size);
 }
 
 bool parse_trasfer_state(buffer_t *buf, tx_parameter_t *transfer_state, size_t *cur) {
@@ -220,23 +220,36 @@ bool parse_method_params(buffer_t *buf,
                 }
                 break;
             case PARAM_AMOUNT:
-                if (!parse_amount(buf, &tx->method.parameters[cur++])) return false;
+                if (!parse_amount(buf, &tx->method.parameters[cur++])) {
+                    return false;
+                }
                 break;
             case PARAM_UINT128:
-                if (!parse_uint128(buf, &tx->method.parameters[cur++])) return false;
+                if (!parse_uint128(buf, &tx->method.parameters[cur++])) {
+                    return false;
+                }
                 break;
             case PARAM_PUBKEY:
-                if (!parse_pk(buf, &tx->method.parameters[cur++])) return false;
-                break;
-            case PARAM_PK_AMOUNT_PAIRS:
-                if (!parse_pk_amount_pairs(buf, &tx->method.parameters[cur], &cur)) return false;
-                break;
-            case PARAM_TRANSFER_STATE:
-                if (!parse_trasfer_state(buf, &tx->method.parameters[cur], &cur)) return false;
+                if (!parse_pk(buf, &tx->method.parameters[cur++])) {
+                    return false;
+                }
                 break;
             case PARAM_ONTID:
-                if (!parse_ont_id(buf)) return false;
+                if (!parse_ont_id(buf)) {
+                    return false;
+                }
                 break;
+            case PARAM_PK_AMOUNT_PAIRS:
+                if (!parse_pk_amount_pairs(buf, &tx->method.parameters[cur], &cur)) {
+                    return false;
+                }
+                break;
+            case PARAM_TRANSFER_STATE:
+                if (!parse_trasfer_state(buf, &tx->method.parameters[cur], &cur)) {
+                    return false;
+                }
+                break;
+
             default:
                 return false;
         }

@@ -1,3 +1,20 @@
+/*******************************************************************************
+ *   Ontology Ledger App
+ *   (c) 2025 OGD
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ ********************************************************************************/
+
 #include <string.h>
 #include "contract.h"
 #include "../ui/types.h"
@@ -125,20 +142,22 @@ void get_native_governance_methods(tx_method_signature_t *methods) {
     methods[10].name = NULL;
 }
 
-void get_tx_payload(payload_t *storage, size_t *count) {
+void get_tx_payload(payload_t *storage) {
     memcpy(storage[0].contract_addr, ONT_ADDR, ADDRESS_LEN);
-    storage[0].token_decimals = 0;
-    storage[0].ticker = "ONT";
+    storage[0].token_decimals = ONT_DECIMALS;
+    storage[0].ticker = ONT_TICKER;
     get_native_token_methods((tx_method_signature_t *) storage[0].methods);
 
     memcpy(storage[1].contract_addr, ONG_ADDR, ADDRESS_LEN);
-    storage[1].token_decimals = 9;
-    storage[1].ticker = "ONG";  //it's the gas token
+    storage[1].token_decimals = ONG_DECIMALS;
+    storage[1].ticker = ONG_TICKER;  //it's the gas token
     get_native_token_methods((tx_method_signature_t *) storage[1].methods);
 
     memcpy(storage[2].contract_addr, GOV_ADDR, ADDRESS_LEN);
-    storage[2].token_decimals = 0;  //not the token decimals, it's the one of the token operated by the contract
-    storage[2].ticker = "ONT";      //not the token ticker, it's the one of the token operated by the contract
+    //not the token decimals, it's the one of the token operated by the contract
+    storage[2].token_decimals = ONT_DECIMALS;
+    //not the token ticker, it's the one of the token operated by the contract
+    storage[2].ticker = ONT_TICKER;
     get_native_governance_methods((tx_method_signature_t *) storage[2].methods);
 
     memcpy(storage[3].contract_addr, WING_ADDR, ADDRESS_LEN);
@@ -146,6 +165,7 @@ void get_tx_payload(payload_t *storage, size_t *count) {
     storage[3].ticker = "WING";
     get_neovm_oep4_token_methods((tx_method_signature_t *) storage[3].methods);
 
+// #ifdef DEBUG
     memcpy(storage[4].contract_addr, WTK_ADDR, ADDRESS_LEN);
     storage[4].token_decimals = 9;
     storage[4].ticker = "";
@@ -155,7 +175,7 @@ void get_tx_payload(payload_t *storage, size_t *count) {
     storage[5].token_decimals = 18;
     storage[5].ticker = "";
     get_neovm_oep4_token_methods((tx_method_signature_t *) storage[5].methods);
-    *count = 6;
+// #endif
 }
 
 

@@ -1,6 +1,6 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
- *   (c) 2020 Ledger SAS.
+ *   Ontology Ledger App
+ *   (c) 2025 OGD
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -14,13 +14,8 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  *****************************************************************************/
-#include <stdio.h>
 
 #include "utils.h"
-#include "format.h"
-#include "../ui/types.h"
-
-#include "../globals.h"
 
 static bool convert_bytes_to_uint64_le(const uint8_t *amount, const size_t len, uint64_t *out) {
     if (amount == NULL || out == NULL) {
@@ -124,8 +119,8 @@ static bool format_u128(uint64_t high, uint64_t low, char *result, size_t buffer
         return false;
     }
 
-    int index = MAX_LENGTH;
-    char buffer[MAX_LENGTH];
+    int index = UINT128_MAX_LENGTH;
+    char buffer[UINT128_MAX_LENGTH];
 
     buffer[--index] = '\0';
 
@@ -159,7 +154,7 @@ static bool format_u128(uint64_t high, uint64_t low, char *result, size_t buffer
         low = sum_low;
     }
 
-    size_t required_length = MAX_LENGTH - index;
+    size_t required_length = UINT128_MAX_LENGTH - index;
     if (buffer_size < required_length) {
         return false;
     }

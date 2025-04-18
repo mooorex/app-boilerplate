@@ -62,15 +62,15 @@ typedef enum {
 } tx_contract_type_e;
 
 typedef enum {
-    PARAM_END,  // Marks the end of parameters, not an actual parameter
-    PARAM_ADDR,
-    PARAM_PUBKEY,
-    PARAM_AMOUNT,
-    PARAM_UINT128,
-    PARAM_ONTID,
-    PARAM_PK_AMOUNT_PAIRS,      // PARAM_PUBKEY, PARAM_AMOUNT
-    PARAM_TRANSFER_STATE,       // PARAM_ADDR, PARAM_ADDR, PARAM_AMOUNT
-    PARAM_TRANSFER_STATE_LIST,  // PARAM_TRANSFER_STATE * n
+    PARAM_END,       // Marks the end of parameters, not an actual parameter
+    PARAM_ADDR,      // Simple type: uint8_t[20], represents an address
+    PARAM_PUBKEY,    // Simple type: uint8_t[66], represents a public key
+    PARAM_AMOUNT,    // Simple type, represents an amount
+    PARAM_UINT128,   // Simple type: uint8_t[16], represents a 128-bit unsigned integer
+    PARAM_ONTID,     // Simple type, represents an ONT ID
+    PARAM_PK_AMOUNT_PAIRS,      // Composite type: PARAM_PUBKEY, PARAM_AMOUNT
+    PARAM_TRANSFER_STATE,       // Composite type: PARAM_ADDR, PARAM_ADDR, PARAM_AMOUNT
+    PARAM_TRANSFER_STATE_LIST,  // Composite type: PARAM_TRANSFER_STATE * n
 } tx_parameter_type_e;
 
 typedef struct {

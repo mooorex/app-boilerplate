@@ -1,6 +1,6 @@
 /*****************************************************************************
- *   Ledger App Boilerplate.
- *   (c) 2020 Ledger SAS.
+ *   Ontology Ledger App
+ *   (c) 2025 OGD
  *
  *  Licensed under the Apache License, Version 2.0 (the "License");
  *  you may not use this file except in compliance with the License.
@@ -20,9 +20,31 @@ tx:
 | Header     | payload size| payload code|   \x00   |
 |--42 bytes--|--any bytes--|--any bytes--|-- 1byte--|
 
-A. tx header:
+A. tx header
 |  Version |  tx-type |    nonce  |  gasprice |  gaslimit |    payer   |
 |--1 byte--|--1 byte--|--4 bytes--|--8 bytes--|--8 bytes--|--20 bytes--|
+
+1. Version:
+Currently, the `version` of the transaction supported by the Ontology Network is 0x00.
+
+2. tx-type:
+The valid `tx-type` of the transaction inlcude two values:
+- 0xd1: the transaction is a native transaction or a neovm contract transaction.
+- 0xd2: the transaction is a wasmvm contract transaction.
+
+3. nonce:
+The `nonce` is a 4-byte unsigned integer.
+
+4. gasPrice:
+The `gasPrice` is a 8-byte unsigned integer, which has a minimum value of 2500.
+
+5. gasLimit:
+The `gasLimit` is a 8-byte unsigned integer, which has a minimum value of 20000.
+
+6. payer:
+The `payer` is a 20-byte script hash and pays the gas for the transaction.
+It can be encoded in the `base58` format to get the payer `address`. We do not show it in the UI.
+
 
 B. payload size
 If the first byte is less than 0xfd, it indicates the length of the payload.
@@ -57,7 +79,7 @@ Specifically: `transferstate transferstate ... transferstate amount c1`
 
 2. The bytecode for parameters in other functions of the Native contract is as follows:
 `00c66b param1 6a7cc8 param2 6a7cc8 param3 6a7cc8 ... paramn 6a7cc8 6c`
-Here, `param` could be an `addr`, an `amount`, a `transferstate`, a `pk`, a `pk_list`, a `num_list`,
+Here, `param` could be an `addr`, an `amount`, a `transferstate`, a `pk`, a `pk_num_pair`,
 etc.
 
 3. The bytecode for each `transferstate` is as follows:
@@ -105,6 +127,8 @@ Similarly, there is no prefix indicating the length.
 #include "ledger_assert.h"
 #endif
 
+// Deserialize and check the header of the transaction (the first 42 bytes of the transaction)
+// The parameters and outputs of this function are same as the `transaction_deserialize` function.
 static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
@@ -112,6 +136,7 @@ static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction
     if (buf->size > MAX_TRANSACTION_LEN) {
         return WRONG_LENGTH_ERROR;
     }
+
     // version
     if (!buffer_read_u8(buf, &tx->header.version) || tx->header.version != 0x00) {
         return BYTECODE_PARSING_ERROR;
@@ -134,7 +159,7 @@ static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction
 
     // gasLimit
     if (!buffer_read_u64(buf, &tx->header.gas_limit, LE) || tx->header.gas_limit < GAS_LIMIT_MIN ||
-        tx->header.gas_limit > UINT64_MAX / tx->header.gas_price) {
+        tx->header.gas_limit > TOKEN_AMOUNT / tx->header.gas_price) {
         return BYTECODE_PARSING_ERROR;
     }
 
@@ -147,28 +172,40 @@ static parser_status_e transaction_deserialize_header(buffer_t *buf, transaction
     return PARSING_OK;
 }
 
+// Deserialize the payload size of the transaction, and check if the payload size is valid.
+// The parameters and outputs of this function are same as the `transaction_deserialize` function.
 static parser_status_e transaction_deserialize_payload_size(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
-    uint8_t first_byte;
-    size_t payload_size;
-    if (!buffer_read_u8(buf, &first_byte)) return BYTECODE_PARSING_ERROR;
+
+    uint8_t first_byte = 0;
+    size_t payload_size = 0;
+    if (!buffer_read_u8(buf, &first_byte) || first_byte == 0) {
+        return BYTECODE_PARSING_ERROR;
+    }
+
     switch (first_byte) {
         case 0xfd: {
-            uint16_t payload_size_16;
-            if (!buffer_read_u16(buf, &payload_size_16, LE)) return BYTECODE_PARSING_ERROR;
+            uint16_t payload_size_16 = 0;
+            if (!buffer_read_u16(buf, &payload_size_16, LE)) {
+                return BYTECODE_PARSING_ERROR;
+            }
             payload_size = payload_size_16;
             break;
         }
         case 0xfe: {
-            uint32_t payload_size_32;
-            if (!buffer_read_u32(buf, &payload_size_32, LE)) return BYTECODE_PARSING_ERROR;
+            uint32_t payload_size_32 = 0;
+            if (!buffer_read_u32(buf, &payload_size_32, LE)) {
+                return BYTECODE_PARSING_ERROR;
+            }
             payload_size = payload_size_32;
             break;
         }
         case 0xff: {
-            uint64_t payload_size_64;
-            if (!buffer_read_u64(buf, &payload_size_64, LE)) return BYTECODE_PARSING_ERROR;
+            uint64_t payload_size_64 = 0;
+            if (!buffer_read_u64(buf, &payload_size_64, LE)) {
+                return BYTECODE_PARSING_ERROR;
+            }
             payload_size = payload_size_64;
             break;
         }
@@ -177,18 +214,22 @@ static parser_status_e transaction_deserialize_payload_size(buffer_t *buf, trans
             break;
     }
 
-    return (buf->offset + payload_size + ARRAY_LENGTH(OPCODE_END) != buf->size) ? WRONG_LENGTH_ERROR
-                                                                                : PARSING_OK;
+    bool is_valid = (buf->offset + payload_size + ARRAY_LENGTH(OPCODE_END) != buf->size);
+
+    return is_valid ? WRONG_LENGTH_ERROR : PARSING_OK;
 }
 
+// Deserialize the contract of the transaction and get the contract type and address.
+// The parameters and outputs of this function are same as the `transaction_deserialize` function.
 static parser_status_e transaction_deserialize_contract(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
+
     size_t os = buf->offset;
     switch (tx->header.tx_type) {
         case 0xd1:
             if (buf->ptr[buf->size - ARRAY_LENGTH(OPCODE_END) - ADDRESS_LEN - 1] !=
-                OPCODE_APPCALL[0]) {
+                OPCODE_APPCALL[0]) {  //'n' for the native contract
                 tx->contract.type = NATIVE_CONTRACT;
                 if ((!buffer_seek_set(buf, buf->size - NATIVE_CONTRACT_CONSTANT_LENGTH) ||
                      !parse_address(buf, true, &(tx->contract.addr)) ||
@@ -198,7 +239,7 @@ static parser_status_e transaction_deserialize_contract(buffer_t *buf, transacti
                     buf->offset != buf->size || !buffer_seek_set(buf, os)) {
                     return BYTECODE_PARSING_ERROR;
                 }
-            } else {
+            } else {  // 0x67 for the neovm contract
                 tx->contract.type = NEOVM_CONTRACT;
                 if (!buffer_seek_set(buf, buf->size - NEOVM_CONTRACT_CONSTANT_LENGTH) ||
                     !parse_check_constant(buf, OPCODE_APPCALL, ARRAY_LENGTH(OPCODE_APPCALL)) ||
@@ -211,7 +252,9 @@ static parser_status_e transaction_deserialize_contract(buffer_t *buf, transacti
             break;
         case 0xd2:
             tx->contract.type = WASMVM_CONTRACT;
-            if (!parse_address(buf, false, &(tx->contract.addr))) return BYTECODE_PARSING_ERROR;
+            if (!parse_address(buf, false, &(tx->contract.addr))) {
+                return BYTECODE_PARSING_ERROR;
+            }
             break;
         default:
             return BYTECODE_PARSING_ERROR;
@@ -219,6 +262,13 @@ static parser_status_e transaction_deserialize_contract(buffer_t *buf, transacti
     return PARSING_OK;
 }
 
+// Deserialize the method of the transaction and get the method name.
+// For native contracts and neovm contracts, since the trailing bytes are fixed, parse backwards
+// until encountering either 0xc1 (for NEOVM contract transactions and native token
+// transfer/transferV2 transactions) or 0x6a7cc86c (for other native transactions). The method name
+// follows these bytes.
+// For wasm contracts, the method name is the first parameter in the payload section.
+// The parameters and outputs of this function are same as the `transaction_deserialize` function.
 static parser_status_e transaction_deserialize_method(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
@@ -236,7 +286,7 @@ static parser_status_e transaction_deserialize_method(buffer_t *buf, transaction
             uint8_t remaining_size = 0;
             if (!buffer_read_u8(buf, &remaining_size) || remaining_size == 0 ||
                 remaining_size != buf->size - buf->offset - ARRAY_LENGTH(OPCODE_END) ||
-                !parse_method(buf, &(tx->method.name))) {
+                !parse_method_name(buf, &(tx->method.name))) {
                 return BYTECODE_PARSING_ERROR;
             }
             return PARSING_OK;
@@ -259,16 +309,19 @@ static parser_status_e transaction_deserialize_method(buffer_t *buf, transaction
             break;
         }
     }
-
     method_intent_length = sEnd - 1 - cur;
+
     if (!buffer_seek_set(buf, cur) || method_intent_length == 0 ||
-        !parse_method(buf, &(tx->method.name)) || tx->method.name.len != method_intent_length ||
+        !parse_method_name(buf, &(tx->method.name)) || tx->method.name.len != method_intent_length ||
         !buffer_seek_set(buf, sBegin)) {
         return BYTECODE_PARSING_ERROR;
     }
     return PARSING_OK;
 }
 
+// Deserialize the parameters of the native token's transfer and transferV2 functions.
+// Called by `transaction_deserialize_params` function.
+// The parameters and outputs of this function are same as the `transaction_deserialize` function.
 static parser_status_e native_transfer_deserialize_params(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
@@ -288,43 +341,54 @@ static parser_status_e native_transfer_deserialize_params(buffer_t *buf, transac
                : BYTECODE_PARSING_ERROR;
 }
 
+// Deserialize the parameters of the transaction.
+// Besides getting the parameters, also set the token ticker and token decimals.
+// The original decimals of ONT and ONG are 0 and 9, respectively.
+// If the transaction is a transferV2, approveV2, or transferFromV2 transaction, the decimals of ONT
+// and ONG are 9 and 18, respectively. The parameters and outputs of this function are same as the
+// `transaction_deserialize` function.
+// Here we also check if the transaction is a blind signed transaction, namely the method is not
+// found in the registered payload array.
 static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
 
     if (tx->contract.type == NATIVE_CONTRACT) {
+        tx->contract.token_decimals = ONT_DECIMALS;
         bool is_ont = memcmp(tx->contract.addr.data, ONT_ADDR, ADDRESS_LEN) == 0;
         bool is_ong = memcmp(tx->contract.addr.data, ONG_ADDR, ADDRESS_LEN) == 0;
         if (is_ont || is_ong) {
-            bool is_transfer = is_specific_method(&tx->method.name, METHOD_TRANSFER);
-            bool is_transfer_v2 = is_specific_method(&tx->method.name, METHOD_TRANSFER_V2);
-            bool is_transfer_from_v2 = is_specific_method(&tx->method.name, METHOD_TRANSFER_FROM_V2);
-            bool is_approve_v2 = is_specific_method(&tx->method.name, METHOD_APPROVE_V2);
+            bool is_transfer = methodcmp(&tx->method.name, METHOD_TRANSFER);
+            bool is_transfer_v2 = methodcmp(&tx->method.name, METHOD_TRANSFER_V2);
+            bool is_transfer_from_v2 = methodcmp(&tx->method.name, METHOD_TRANSFER_FROM_V2);
+            bool is_approve_v2 = methodcmp(&tx->method.name, METHOD_APPROVE_V2);
 
-            tx->contract.token_decimals = is_ont ? 0 : 9;
+            tx->contract.token_decimals = is_ong ? ONG_DECIMALS : ONT_DECIMALS;
             if (is_transfer_v2 || is_transfer_from_v2 || is_approve_v2) {
                 tx->contract.token_decimals += 9;
             }
-            // todo: optimize this
-            strlcpy(tx->contract.ticker, is_ont ? "ONT" : "ONG", MAX_TICKER_LEN);
 
             if (is_transfer || is_transfer_v2) {
+                strlcpy(tx->contract.ticker, is_ont ? ONT_TICKER : ONG_TICKER, MAX_TICKER_LEN);
                 return native_transfer_deserialize_params(buf, tx);
             }
         }
 
         if (!parse_check_constant(buf, OPCODE_ST_BEGIN, ARRAY_LENGTH(OPCODE_ST_BEGIN))) {
-            PRINTF("Error: parse_check_constant OPCODE_ST_BEGIN failed\n");
             return BYTECODE_PARSING_ERROR;
         }
     }
 
-    payload_t payload[6];
-    size_t payload_len;
-    get_tx_payload(payload, &payload_len);
+    payload_t payload[PREDEFINED_CONTRACT_NUM];
+    get_tx_payload(payload);
 
-    size_t params_num = 0;
-    for (size_t i = 0; i < payload_len; i++) {
+    //count the number of parameters
+    //it is only used to check when the transaction is a neovm contract transaction
+    //It is NOT right to use it to get the number of parameters for other types of transactions.
+    //The parameters of a neovm contract transaction are simple types, not composite types
+    size_t params_num = 0; 
+
+    for (size_t i = 0; i < PREDEFINED_CONTRACT_NUM; i++) {
         if (memcmp(tx->contract.addr.data, payload[i].contract_addr, ADDRESS_LEN) == 0) {
             strlcpy(tx->contract.ticker, payload[i].ticker, MAX_TICKER_LEN);
             if (tx->contract.type != NATIVE_CONTRACT) {
@@ -332,46 +396,43 @@ static parser_status_e transaction_deserialize_params(buffer_t *buf, transaction
             }
             const tx_method_signature_t *methods = payload[i].methods;
             while (methods->name != NULL) {
-                if (is_specific_method(&tx->method.name, methods->name)) {
+                if (methodcmp(&tx->method.name, methods->name)) {
                     if (!parse_method_params(buf, tx, methods->parameters, &params_num)) {
-                        PRINTF("Error: parse_method_params failed\n");
                         return BYTECODE_PARSING_ERROR;
                     }
                     break;
                 }
                 ++methods;
             }
-            if (tx->contract.type != NATIVE_CONTRACT && methods->name == NULL) {
-                return PARSING_TX_NOT_DEFINED;
+            if (methods->name == NULL) {
+                return PARSING_TX_NOT_DEFINED;  // blind signed transaction
             }
             break;
         }
-        if (i == payload_len - 1) {
-            return PARSING_TX_NOT_DEFINED;
+        if (i == PREDEFINED_CONTRACT_NUM - 1) {
+            return PARSING_TX_NOT_DEFINED;  // blind signed transaction
         }
     }
 
     if (tx->contract.type == NATIVE_CONTRACT &&
         !parse_check_constant(buf, OPCODE_ST_END, ARRAY_LENGTH(OPCODE_ST_END))) {
-        PRINTF("Error: parse_check_constant OPCODE_ST_END failed\n");
         return BYTECODE_PARSING_ERROR;
     }
-
     if (tx->contract.type == NEOVM_CONTRACT &&
         (!parse_check_amount(buf, params_num) ||
          !parse_check_constant(buf, OPCODE_PACK, ARRAY_LENGTH(OPCODE_PACK)))) {
-        PRINTF("Error: NEOVM parsing failed\n");
         return BYTECODE_PARSING_ERROR;
     }
     if (tx->contract.type == WASMVM_CONTRACT &&
         !parse_check_constant(buf, OPCODE_END, ARRAY_LENGTH(OPCODE_END))) {
-        PRINTF("Error: WASMVM parsing failed\n");
         return BYTECODE_PARSING_ERROR;
     }
 
     return PARSING_OK;
 }
 
+// Deserialize the transaction.
+// Parse the transaction header, payload size, contract, method, and parameters sequentially.
 parser_status_e transaction_deserialize(buffer_t *buf, transaction_t *tx) {
     LEDGER_ASSERT(buf != NULL, "NULL buf");
     LEDGER_ASSERT(tx != NULL, "NULL tx");
