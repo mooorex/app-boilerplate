@@ -152,11 +152,15 @@ static bool handle_params(transaction_t *tx,
             (*nbPairs)++;
         }
         if (is_specific_method(&tx->method.name, METHOD_WITHDRAW)) {
-            strlcat(G_context.display_data.amount, ONT_VIEW, sizeof(G_context.display_data.amount));
             tag_pairs[*nbPairs].item = TOTAL_WITHDRAW;
-            tag_pairs[*nbPairs].value = G_context.display_data.amount;
-            (*nbPairs)++;
+        } else if (is_specific_method(&tx->method.name, METHOD_AUTHORIZE_FOR_PEER)) {
+            tag_pairs[*nbPairs].item = POS;
+        } else if (is_specific_method(&tx->method.name, METHOD_UNAUTHORIZE_FOR_PEER)) {
+            tag_pairs[*nbPairs].item = AMOUNT;
         }
+        strlcat(G_context.display_data.amount, ONT_VIEW, sizeof(G_context.display_data.amount));
+        tag_pairs[*nbPairs].value = G_context.display_data.amount;
+        (*nbPairs)++;
     }
     if (tx->contract.type == NATIVE_CONTRACT &&
         (is_specific_method(&tx->method.name, METHOD_TRANSFER) ||
