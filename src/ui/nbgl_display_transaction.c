@@ -174,13 +174,6 @@ static bool handle_params(transaction_t *tx,
 
                                     g_buffers[i + 3 * state_num],
                                     MAX_BUFFER_LEN);
-                parse_param_to_pair(tx,
-                                    i + 3 * state_num,
-                                    &tag_pairs[configs[i].pos + 3 * state_num],
-                                    configs[i].item,
-
-                                    g_buffers[i + 3 * state_num],
-                                    MAX_BUFFER_LEN);
             }
             state_num++;
             *nbPairs += 3;
